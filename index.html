@@ -14,6 +14,18 @@
   
   <!-- Custom Styling -->
   <link rel="stylesheet" href="css/style.css">
+
+  <!-- Prevent AOS Flash of Unstyled Content (FOUC) -->
+  <style>
+    [data-aos] {
+      pointer-events: none;
+    }
+    [data-aos]:not(.aos-init) {
+      opacity: 0 !important;
+      transform: none !important;
+      transition: none !important;
+    }
+  </style>
 </head>
 <body>
 
