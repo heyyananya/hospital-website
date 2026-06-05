@@ -1,6 +1,10 @@
 /* Palanpur Health Hub - Shared Dashboard Layout System */
 
 /* Global Dashboard Container Override */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   background: var(--light);
 }

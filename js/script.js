@@ -1913,12 +1913,17 @@ function initHomepage() {
   // Set initial language and populate doctors grid
   setLanguage(currentLanguage);
   
+  const langChosen = localStorage.getItem("phh_lang_chosen");
   const modal = document.getElementById("initial-lang-modal");
-  if (modal) {
+  if (!langChosen && modal) {
     modal.style.display = "flex";
     modal.style.opacity = "1";
     modal.classList.add("active");
     document.body.classList.add("modal-open");
+  } else if (modal) {
+    modal.style.display = "none";
+    modal.classList.remove("active");
+    document.body.classList.remove("modal-open");
   }
 }
 
