@@ -792,7 +792,7 @@ function dismissLoader() {
     if (loader) {
       loader.classList.add("fade-out");
     }
-    animateCounters();
+    fetchLiveStats();
   }, 1000);
 }
 
@@ -806,8 +806,8 @@ if (document.readyState === "complete" || document.readyState === "interactive")
 setTimeout(() => {
   if (loader && !loader.classList.contains("fade-out")) {
     loader.classList.add("fade-out");
-    if (typeof animateCounters === 'function') {
-      animateCounters();
+    if (typeof fetchLiveStats === 'function') {
+      fetchLiveStats();
     }
   }
 }, 1500);
@@ -924,7 +924,7 @@ function animateCounters() {
   statNumbers.forEach(stat => {
     const target = parseInt(stat.getAttribute("data-val"));
     let count = 0;
-    const speed = Math.ceil(target / 40);
+    const speed = Math.ceil(target / 40) || 1;
     
     const counterInterval = setInterval(() => {
       count += speed;
@@ -936,6 +936,26 @@ function animateCounters() {
       }
     }, 30);
   });
+}
+
+async function fetchLiveStats() {
+  try {
+    const response = await fetch(`${window.API_BASE}/api/stats`);
+    const data = await response.json();
+    if (data.success) {
+      const patientsStat = document.querySelector('.stat-item:nth-child(1) .stat-num');
+      const docsStat = document.querySelector('.stat-item:nth-child(2) .stat-num');
+      const deptsStat = document.querySelector('.stat-item:nth-child(3) .stat-num');
+
+      if (patientsStat) patientsStat.setAttribute('data-val', data.happyPatients);
+      if (docsStat) docsStat.setAttribute('data-val', data.doctorsCount);
+      if (deptsStat) deptsStat.setAttribute('data-val', data.departmentsCount);
+    }
+  } catch (err) {
+    console.error('Error fetching live stats from API:', err);
+  } finally {
+    animateCounters();
+  }
 }
 
 

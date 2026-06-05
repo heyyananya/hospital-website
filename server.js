@@ -248,6 +248,39 @@ app.get('/api/db-test', async (req, res) => {
   }
 });
 
+// Get live statistics for the homepage counters
+app.get('/api/stats', async (req, res) => {
+  try {
+    const appointmentsResult = await pool.query('SELECT COUNT(*) FROM appointments');
+    const doctorsResult = await pool.query('SELECT COUNT(*) FROM doctors');
+    const deptsResult = await pool.query('SELECT COUNT(*) FROM departments');
+
+    // Calculate happy patients: a base count (500) plus the number of booked appointments
+    const basePatients = 500;
+    const dbAppointmentsCount = parseInt(appointmentsResult.rows[0].count, 10);
+    const happyPatientsCount = basePatients + dbAppointmentsCount;
+
+    // Count doctors
+    const dbDoctorsCount = parseInt(doctorsResult.rows[0].count, 10);
+    const activeDoctors = dbDoctorsCount > 0 ? dbDoctorsCount : 25;
+
+    // Count departments
+    const dbDeptsCount = parseInt(deptsResult.rows[0].count, 10);
+    const activeDepts = dbDeptsCount > 0 ? dbDeptsCount : 10;
+
+    res.json({
+      success: true,
+      happyPatients: happyPatientsCount,
+      doctorsCount: activeDoctors,
+      departmentsCount: activeDepts
+    });
+  } catch (err) {
+    console.error('Error fetching statistics:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
 // Staff & User Registration API Route
 app.post('/api/auth/register', async (req, res) => {
   const { username, password, role, name } = req.body;
