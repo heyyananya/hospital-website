@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Superspeciality Doctors Consultation - Access Patient Portal, Doctor Workstation and System Administrator dashboard.">
+  <title>Portal Access | Superspeciality Doctors Consultation</title>
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  
+  <!-- Custom Styling -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+
+  <!-- Background blobs -->
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
+
+  <!-- Header Branding Bar -->
+  <header class="auth-header">
+    <div class="container" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+      <a href="index.html" class="logo">
+        <i class="fa-solid fa-heart-pulse logo-icon"></i>
+        <div class="logo-text" data-translate="brand-logo">
+          <span class="logo-top">Superspeciality</span>
+          <span class="logo-accent logo-bottom">Doctors Consultation</span>
+        </div>
+      </a>
+      
+      <!-- Language Switcher -->
+      <div class="lang-selector" id="lang-selector">
+        <div class="lang-btn" id="lang-btn">
+          <i class="fa-solid fa-globe"></i>
+          <span id="current-lang">EN</span>
+          <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem;"></i>
+        </div>
+        <div class="lang-dropdown" id="lang-dropdown">
+          <span class="lang-option" data-lang="en">English</span>
+          <span class="lang-option" data-lang="gu">ગુજરાતી</span>
+          <span class="lang-option" data-lang="hi">हिन्दी</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Login Area -->
+  <main class="auth-main container">
+    <div class="glass-card auth-card" data-aos="zoom-in">
+      <div class="auth-logo-box">
+        <i class="fa-solid fa-shield-halved"></i>
+        <h2 data-translate="auth-gate-title">Secure Gateway Portal</h2>
+        <p data-translate="auth-gate-p">Select your user profile classification to authenticate details.</p>
+      </div>
+
+      <!-- Segmented Control Toggle -->
+      <div class="auth-toggle-group" id="auth-toggle-group">
+        <button class="auth-toggle-btn active" id="toggle-patient" data-tab="patient">
+          <i class="fa-solid fa-user-injured"></i> <span data-translate="tab-patient">Patient Portal</span>
+        </button>
+        <button class="auth-toggle-btn" id="toggle-staff" data-tab="staff">
+          <i class="fa-solid fa-user-shield"></i> <span data-translate="tab-staff">Staff Workspace</span>
+        </button>
+        <div class="toggle-slider"></div>
+      </div>
+
+      <!-- Tab Panels -->
+      <div class="auth-panels-container">
+        
+        <!-- Patient Panel -->
+        <div class="auth-form-panel active" id="auth-panel-patient">
+          <!-- Login View -->
+          <div id="patient-login-view" style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
+            <div class="auth-panel-header">
+              <h3 data-translate="auth-patient-title">Patient Dashboard Login</h3>
+              <p data-translate="auth-patient-p">Enter your registered mobile number or email for secure verification.</p>
+            </div>
+            <div class="contact-form">
+              <div class="form-group">
+                <input type="text" id="patient-login-input" class="form-control" placeholder=" " required>
+                <label for="patient-login-input" class="floating-label" data-translate="patient-login-label">Email or Mobile Number</label>
+              </div>
+              
+              <button class="btn btn-primary btn-ripple w-100" id="patient-otp-trigger" data-translate="btn-get-otp">Get Verification OTP</button>
+              
+              <!-- OTP Input field (hidden initially) -->
+              <div id="patient-otp-stage" class="otp-stage" style="display:none; flex-direction:column; gap:15px; margin-top:15px;">
+                <p class="otp-hint-msg"><i class="fa-solid fa-circle-info"></i> <span data-translate="otp-sent-hint">OTP sent! (Use test code: 123456)</span></p>
+                <div class="form-group">
+                  <input type="text" id="patient-otp-input" class="form-control" placeholder="Enter 6-digit Code" data-translate-placeholder="patient-otp-placeholder" maxlength="6" required>
+                </div>
+                <button class="btn btn-primary btn-ripple w-100" id="patient-login-confirm" data-translate="btn-verify-login">Verify & Enter Dashboard</button>
+              </div>
+
+              <div style="margin-top: 20px; text-align: center;">
+                <span style="font-size: 0.85rem; color: var(--text-secondary);" data-translate="patient-new-text">New Patient?</span>
+                <a href="#" id="goto-patient-register" style="font-size: 0.85rem; color: var(--primary); font-weight: 600; text-decoration: none; margin-left: 5px;" data-translate="patient-register-link">Register Profile</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Register View (Hidden by default) -->
+          <div id="patient-register-view" style="display: none; flex-direction: column; gap: 20px; width: 100%;">
+            <div class="auth-panel-header">
+              <h3 data-translate="auth-patient-register-title">Patient Registration</h3>
+              <p data-translate="auth-patient-register-p">Create a new patient profile to track history and book slots.</p>
+            </div>
+            <div class="contact-form">
+              <div class="form-group" style="margin-bottom: 15px;">
+                <input type="text" id="patient-register-name" class="form-control" placeholder=" " required>
+                <label for="patient-register-name" class="floating-label" data-translate="patient-register-name-label">Full Name</label>
+              </div>
+              <div class="form-group" style="margin-bottom: 15px;">
+                <input type="email" id="patient-register-email" class="form-control" placeholder=" " required>
+                <label for="patient-register-email" class="floating-label" data-translate="patient-register-email-label">Email ID</label>
+              </div>
+              <div class="form-group" style="margin-bottom: 15px;">
+                <input type="text" id="patient-register-phone" class="form-control" placeholder=" " required>
+                <label for="patient-register-phone" class="floating-label" data-translate="patient-register-phone-label">Mobile Number</label>
+              </div>
+              
+              <button class="btn btn-primary btn-ripple w-100" id="patient-register-otp-trigger" data-translate="btn-register-otp">Register & Get OTP</button>
+              
+              <!-- OTP Input field for registration (hidden initially) -->
+              <div id="patient-register-otp-stage" class="otp-stage" style="display:none; flex-direction:column; gap:15px; margin-top:15px;">
+                <p class="otp-hint-msg"><i class="fa-solid fa-circle-info"></i> <span data-translate="otp-sent-hint">OTP sent! (Use test code: 123456)</span></p>
+                <div class="form-group">
+                  <input type="text" id="patient-register-otp-input" class="form-control" placeholder="Enter 6-digit Code" data-translate-placeholder="patient-otp-placeholder" maxlength="6" required>
+                </div>
+                <button class="btn btn-primary btn-ripple w-100" id="patient-register-confirm" data-translate="btn-register-confirm">Verify & Create Account</button>
+              </div>
+
+              <div style="margin-top: 20px; text-align: center;">
+                <span style="font-size: 0.85rem; color: var(--text-secondary);" data-translate="patient-exist-text">Already have an account?</span>
+                <a href="#" id="goto-patient-login" style="font-size: 0.85rem; color: var(--primary); font-weight: 600; text-decoration: none; margin-left: 5px;" data-translate="patient-login-link">Login here</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Staff Workspace Panel -->
+        <div class="auth-form-panel" id="auth-panel-staff">
+          <div class="auth-panel-header">
+            <h3 data-translate="auth-staff-title">Staff Workspace Login</h3>
+            <p data-translate="auth-staff-p">Enter front desk, medical specialist, or system administrator credentials.</p>
+          </div>
+          <div class="contact-form">
+            <div class="form-group">
+              <input type="text" id="staff-login-username" class="form-control" placeholder=" " required>
+              <label for="staff-login-username" class="floating-label" data-translate="staff-username-label">Username or Email ID</label>
+            </div>
+            <div class="form-group">
+              <input type="password" id="staff-login-pass" class="form-control" placeholder=" " required>
+              <label for="staff-login-pass" class="floating-label" data-translate="staff-pass-label">Password</label>
+            </div>
+            <button class="btn btn-primary btn-ripple w-100" id="staff-login-btn" data-translate="btn-login-staff">Enter Workspace</button>
+            <p class="auth-helper-msg" style="margin-top: 15px; text-align: center; font-size: 0.85rem; color: var(--text-secondary);">
+              New Medical Specialist? <a href="#" id="btn-register-doc-modal" style="color: var(--primary); font-weight: 600; text-decoration: none;">Register Profile</a>
+            </p>
+          </div>
+        </div>
+
+      </div>
+      
+      <!-- Back button -->
+      <a href="index.html" class="auth-back-link"><i class="fa-solid fa-arrow-left"></i> <span data-translate="return-home">Return to Homepage</span></a>
+    </div>
+  </main>
+
+  <footer class="auth-footer">
+    <p data-translate="footer-copyright">&copy; 2026 Superspeciality Doctors Consultation. Smart Hospital Solutions.</p>
+  </footer>
+
+  <!-- DOCTOR REGISTRATION MODAL -->
+  <div id="doctor-reg-modal" class="modal-overlay" style="display: none; z-index: 10000;">
+    <div class="modal-content" style="max-width: 580px; padding: 35px; width: 90%; margin: auto;">
+      <button onclick="closeDocRegModal()" style="position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #64748b; transition: color 0.2s; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%;"><i class="fa-solid fa-xmark"></i></button>
+      
+      <div style="background: rgba(0, 102, 255, 0.08); color: var(--primary); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-size: 1.6rem; box-shadow: 0 4px 10px rgba(0, 102, 255, 0.1);">
+        <i class="fa-solid fa-user-doctor"></i>
+      </div>
+      
+      <h3 style="font-size: 1.4rem; font-weight: 800; color: var(--dark); margin-bottom: 6px; text-align: center; tracking: -0.5px;">Medical Specialist Registration</h3>
+      <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 25px; text-align: center; line-height: 1.5;">Register your specialty details to join the Superspeciality Doctors Consultation network. Profile must be approved by the Chief Admin Doctor before activation.</p>
+      
+      <form id="doctor-reg-form" class="contact-form" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="doc-reg-grid">
+          <div class="form-group" style="margin-bottom: 0;">
+            <input type="text" id="reg-doc-name" class="form-control" placeholder="e.g. Dr. Rajesh Shah" required>
+            <label for="reg-doc-name" class="floating-label">Full Name</label>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <select id="reg-doc-dept" class="form-control" required style="height: 50px;">
+              <option value="" disabled selected></option>
+              <option value="Cardiology">Cardiology</option>
+              <option value="Neurology">Neurology</option>
+              <option value="Pulmonology">Pulmonology</option>
+              <option value="Psychology">Psychology</option>
+              <option value="Orthopedics">Orthopedics</option>
+              <option value="Dermatology">Dermatology</option>
+              <option value="ENT">ENT</option>
+              <option value="Pediatrics">Pediatrics</option>
+              <option value="Gynecology">Gynecology</option>
+              <option value="General Medicine">General Medicine</option>
+            </select>
+            <label for="reg-doc-dept" class="floating-label">Medical Specialty</label>
+          </div>
+        </div>
+
+        <div class="doc-reg-grid">
+          <div class="form-group" style="margin-bottom: 0;">
+            <input type="text" id="reg-doc-exp" class="form-control" placeholder="e.g. 5 Years" required>
+            <label for="reg-doc-exp" class="floating-label">Experience Duration</label>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <input type="number" id="reg-doc-fee" class="form-control" placeholder="e.g. 500" required>
+            <label for="reg-doc-fee" class="floating-label">Consultation Fee (₹)</label>
+          </div>
+        </div>
+
+        <div class="doc-reg-grid">
+          <div class="form-group" style="margin-bottom: 0;">
+            <input type="text" id="reg-doc-days" class="form-control" placeholder="e.g. Mon, Wed, Fri" required>
+            <label for="reg-doc-days" class="floating-label">Visiting Days</label>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <input type="text" id="reg-doc-time" class="form-control" placeholder="e.g. 10 AM - 1 PM" required>
+            <label for="reg-doc-time" class="floating-label">Visiting Hours</label>
+          </div>
+        </div>
+
+        <div class="doc-reg-grid">
+          <div class="form-group" style="margin-bottom: 0;">
+            <input type="text" id="reg-doc-user" class="form-control" placeholder="e.g. rajesh_shah" required>
+            <label for="reg-doc-user" class="floating-label">Desired Username</label>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <input type="email" id="reg-doc-email" class="form-control" placeholder="e.g. rajesh@hub.com" required>
+            <label for="reg-doc-email" class="floating-label">Email ID</label>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <input type="password" id="reg-doc-pass" class="form-control" placeholder="••••••••" required>
+          <label for="reg-doc-pass" class="floating-label">Desired Password</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-ripple w-100" style="margin-top: 15px; height: 50px; font-weight: 700; border-radius: var(--border-radius-sm); font-size: 0.95rem; letter-spacing: 0.5px;">Register & Submit Profile</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Login Logic Script -->
+  <script src="js/sync.js?v=6"></script>
+  <script src="js/init.js?v=6"></script>
+  <script src="js/auth.js?v=6"></script>
+</body>
+</html>

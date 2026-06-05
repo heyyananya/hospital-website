@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Superspeciality Doctors Consultation - Front Desk Receptionist Console. Register walk-ins, verify appointments, and manage schedules.">
+  <title>Receptionist Desk | Superspeciality Doctors Consultation</title>
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  
+  <!-- Custom Styling -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  
+  <style>
+    /* Premium Receptionist-specific dashboard styles */
+    .reorder-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 15px;
+    }
+    .reorder-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius-sm);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+      transition: all 0.2s ease;
+    }
+    .reorder-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+    }
+    .reorder-controls {
+      display: flex;
+      gap: 8px;
+    }
+    .btn-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+    }
+    .btn-circle:hover {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .btn-action-sm {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .live-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.5; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); opacity: 0.5; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .search-highlight {
+      background: rgba(245, 158, 11, 0.2);
+      border-bottom: 2px solid #f59e0b;
+      padding: 0 2px;
+    }
+    .toast-msg {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--grad-dark);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      box-shadow: var(--glass-shadow);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .toast-msg.active {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .badge-status.rescheduled {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+    }
+    .badge-status.cancelled {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+    .badge-status.expired {
+      background: rgba(100, 116, 139, 0.15);
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-wrapper">
+    <!-- Sidebar Navigation -->
+    <aside class="dashboard-sidebar" id="dashboard-sidebar">
+      <div class="sidebar-logo">
+        <i class="fa-solid fa-heart-pulse"></i>
+        <div class="logo-text">
+          <span>Superspeciality</span>
+          <span>Doctors</span>
+          <span>Consultation</span>
+        </div>
+      </div>
+
+      <ul class="sidebar-nav">
+        <li>
+          <button class="sidebar-nav-btn active" data-db-tab="receptionist-home">
+            <i class="fa-solid fa-chart-line"></i> <span>Reception Overview</span>
+          </button>
+        </li>
+        <li>
+          <button class="sidebar-nav-btn" data-db-tab="receptionist-walkin">
+            <i class="fa-solid fa-user-plus"></i> <span>Walk-in Registry</span>
+          </button>
+        </li>
+
+        <li>
+          <button class="sidebar-nav-btn" data-db-tab="receptionist-doctors">
+            <i class="fa-solid fa-user-md"></i> <span>Doctor Availability</span>
+          </button>
+        </li>
+        <li>
+          <button class="sidebar-nav-btn" data-db-tab="receptionist-search">
+            <i class="fa-solid fa-magnifying-glass"></i> <span>Search Booking</span>
+          </button>
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <svg viewBox="0 0 100 100" width="38" height="38">
+            <circle cx="50" cy="50" r="48" fill="#10b981"/>
+            <path d="M50,15 C60,15 68,23 68,33 C68,43 60,51 50,51 C40,51 32,43 32,33 C32,23 40,15 50,15 Z M20,80 C20,65 32,58 50,58 C68,58 80,65 80,80 Z" fill="#ffffff"/>
+          </svg>
+          <div class="sidebar-user-info">
+            <span class="sidebar-user-name" id="receptionist-db-user-name">Front Desk Desk</span>
+            <span class="sidebar-user-role">Receptionist Portal</span>
+          </div>
+        </div>
+        <button class="btn btn-secondary w-100" id="receptionist-logout" style="border-color: rgba(255,255,255,0.15); color: #fff; padding: 10px;">
+          <i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Content -->
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <button class="sidebar-toggle-btn" id="sidebar-toggle-trigger" style="display: none; background: none; border: none; font-size: 1.5rem; color: var(--dark); cursor: pointer; padding: 5px; align-items: center; justify-content: center; border-radius: 6px; transition: background-color 0.2s;">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="dashboard-welcome">
+            <h2>Receptionist Control Console <span class="live-indicator" style="margin-left: 8px;" title="Connected Real-Time"></span></h2>
+            <p>Verify details, register walk-in patients, and update doctor statuses.</p>
+          </div>
+        </div>
+        <a href="index.html" class="btn btn-secondary" style="padding: 10px 20px;">
+          <i class="fa-solid fa-house"></i> Home Screen
+        </a>
+      </header>
+
+      <!-- Stats Counters Grid -->
+      <div class="db-stats-grid">
+        <div class="glass-card db-stat-card">
+          <div class="db-stat-icon"><i class="fa-solid fa-calendar-day"></i></div>
+          <div class="db-stat-info">
+            <h4 id="rep-stat-today">0</h4>
+            <p>Today's Bookings</p>
+          </div>
+        </div>
+        <div class="glass-card db-stat-card">
+          <div class="db-stat-icon" style="color:var(--status-available); background:rgba(16,185,129,0.08);"><i class="fa-solid fa-clipboard-check"></i></div>
+          <div class="db-stat-info">
+            <h4 id="rep-stat-checkin">0</h4>
+            <p>Completed Visits</p>
+          </div>
+        </div>
+        <div class="glass-card db-stat-card">
+          <div class="db-stat-icon" style="color:#f59e0b; background:rgba(245,158,11,0.08);"><i class="fa-solid fa-hourglass-half"></i></div>
+          <div class="db-stat-info">
+            <h4 id="rep-stat-waiting">0</h4>
+            <p>Pending Consultations</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Panel: Reception Overview (Today's Appointments) -->
+      <div class="dashboard-body-panel active" id="db-panel-receptionist-home">
+        <div class="db-table-box">
+          <div class="db-table-header" style="flex-wrap: wrap; gap: 15px;">
+            <h3>Active Appointment Ledger (Today)</h3>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="overview-search-input" placeholder="Quick Filter patients..." style="padding: 8px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.85rem; outline: none; background: rgba(255,255,255,0.6);">
+            </div>
+          </div>
+          <div class="db-table-responsive">
+            <table class="db-table">
+              <thead>
+                <tr>
+                  
+                  <th>Patient Details</th>
+                  <th>Preferred Doctor</th>
+                  <th>Scheduled Slot</th>
+                  <th>Booking Ref</th>
+                  <th>Payment Ref</th>
+                  <th>Status</th>
+                  
+                </tr>
+              </thead>
+              <tbody id="receptionist-today-appointments-tbody">
+                <!-- Javascript Injection -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel: Walk-in Registry -->
+      <div class="dashboard-body-panel" id="db-panel-receptionist-walkin">
+        <div class="admin-crud-layout" style="grid-template-columns: 1.2fr 1fr;">
+          <!-- Registration form -->
+          <div class="glass-card" style="padding: 30px;">
+            <h3 style="font-size: 1.3rem; margin-bottom: 20px; color: var(--dark);"><i class="fa-solid fa-address-card"></i> Immediate Walk-in Registration</h3>
+            
+            <form id="receptionist-walkin-form">
+              <div class="form-group">
+                <input type="text" id="walkin-patient-name" class="form-control" required>
+                <label for="walkin-patient-name" class="floating-label">Patient Full Name</label>
+              </div>
+
+              <div class="form-inline-grid">
+                <div class="form-group">
+                  <input type="tel" id="walkin-patient-phone" class="form-control" pattern="[0-9]{10}" placeholder=" " required>
+                  <label for="walkin-patient-phone" class="floating-label">Mobile Number (10 digits)</label>
+                </div>
+                <div class="form-group">
+                  <input type="email" id="walkin-patient-email" class="form-control" placeholder=" ">
+                  <label for="walkin-patient-email" class="floating-label">Email ID (Optional)</label>
+                </div>
+              </div>
+
+              <div class="form-inline-grid">
+                <div class="form-group">
+                  <select id="walkin-dept-select" class="form-control" required>
+                    <option value="" disabled selected></option>
+                    <option value="General Medicine">General Medicine</option>
+                    <option value="Cardiology">Cardiology</option>
+                    <option value="Neurology">Neurology</option>
+                    <option value="Pulmonology">Pulmonology</option>
+                    <option value="Orthopedics">Orthopedics</option>
+                    <option value="Gynecology">Gynecology</option>
+                    <option value="Pediatrics">Pediatrics</option>
+                    <option value="Dermatology">Dermatology</option>
+                    <option value="ENT">ENT</option>
+                    <option value="Psychology">Psychology</option>
+                  </select>
+                  <label for="walkin-dept-select" class="floating-label">Select Medical Department</label>
+                </div>
+
+                <div class="form-group">
+                  <select id="walkin-doc-select" class="form-control" required>
+                    <option value="" disabled selected></option>
+                    <!-- Filled dynamically -->
+                  </select>
+                  <label for="walkin-doc-select" class="floating-label">Assign Medical Doctor</label>
+                </div>
+              </div>
+
+              <!-- Interactive Available slots selection -->
+              <div class="form-group" id="walkin-slots-wrapper" style="display: none; margin-top: 15px;">
+                <div style="background: rgba(0, 102, 255, 0.04); border: 1px solid rgba(0, 102, 255, 0.15); padding: 12px; border-radius: var(--border-radius-md);">
+                  <span style="font-size:0.8rem; color:var(--text-secondary); font-weight:600; display:block; margin-bottom:4px;">Consultation Timings Today:</span>
+                  <span id="walkin-hours-display" style="font-size:1.15rem; font-weight:800; color:var(--dark);">10:00 AM - 05:00 PM</span>
+                </div>
+                <input type="hidden" id="walkin-selected-slot" required>
+              </div>
+
+              <div class="form-group" style="margin-top: 15px;">
+                <textarea id="walkin-symptoms" class="form-control" rows="3" required placeholder=" "></textarea>
+                <label for="walkin-symptoms" class="floating-label">Primary Symptoms / Health Concern</label>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-ripple w-100" style="padding: 14px; margin-top: 15px;">
+                <i class="fa-solid fa-calendar-check"></i> Confirm Walk-in
+              </button>
+            </form>
+          </div>
+
+          <!-- Walk-in guide card -->
+          <div class="glass-card" style="padding: 30px;">
+            <h3 style="font-size:1.2rem; color:var(--dark); margin-bottom:15px;"><i class="fa-solid fa-hospital-user"></i> Registration Guidelines</h3>
+            <p style="font-size:0.9rem; line-height:1.6; margin-bottom:20px;">Use this interface when a patient arrives at the hospital reception desk without a pre-booked online appointment slot. Selecting the doctor will dynamically fetch their remaining available slots for today's shifts.</p>
+            
+            <div style="background:rgba(0,102,255,0.05); padding:15px; border-radius:8px; border-left:4px solid var(--primary); margin-bottom:25px;">
+              <h4 style="font-size:0.9rem; font-weight:700; color:var(--primary); margin-bottom:5px;">Real-Time Synchronization</h4>
+              <p style="font-size:0.8rem; line-height:1.5;">Once you register a walk-in patient, the system will instantly save the booking, lock the selected slot, and push the patient directly onto the doctor's workstation schedule.</p>
+            </div>
+
+            <div style="background:rgba(16,185,129,0.05); padding:15px; border-radius:8px; border-left:4px solid var(--status-available);">
+              <h4 style="font-size:0.9rem; font-weight:700; color:var(--status-available); margin-bottom:5px;">Zero Payment gateway razorpay overlay needed</h4>
+              <p style="font-size:0.8rem; line-height:1.5;">Walk-in registrations bypass online razorpay simulator checks. Cash/offline consultation fee payments can be collected directly at the front desk counter.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
+      <!-- Panel: Doctor Availability -->
+      <div class="dashboard-body-panel" id="db-panel-receptionist-doctors">
+        <div class="db-table-box">
+          <div class="db-table-header">
+            <h3>Specialist Schedule & Real-Time Availability Board</h3>
+          </div>
+          <div class="db-table-responsive">
+            <table class="db-table">
+              <thead>
+                <tr>
+                  <th>Medical Doctor</th>
+                  <th>Department Specialty</th>
+                  <th>Shift Days</th>
+                  <th>Shift Timings</th>
+                  <th>Consultation Fee</th>
+                  <th>Current Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="receptionist-doctors-tbody">
+                <!-- Javascript Injection -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel: Search Appointments -->
+      <div class="dashboard-body-panel" id="db-panel-receptionist-search">
+        <div class="glass-card" style="padding: 25px; margin-bottom: 30px;">
+          <h3 style="font-size:1.1rem; color:var(--dark); margin-bottom:15px;"><i class="fa-solid fa-filter"></i> Central Database Query Engine</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <input type="text" id="search-query" class="form-control" placeholder=" ">
+              <label for="search-query" class="floating-label"><i class="fa-solid fa-magnifying-glass"></i> Search Name / Phone / Doctor</label>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <select id="search-status" class="form-control">
+                <option value="All">All Statuses</option>
+                <option value="Upcoming">Upcoming</option>
+                <option value="Ongoing">Ongoing</option>
+                <option value="Rescheduled">Rescheduled</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+              <label for="search-status" class="floating-label">Filter by Status</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="db-table-box">
+          <div class="db-table-header">
+            <h3>Search Result Listings</h3>
+          </div>
+          <div class="db-table-responsive">
+            <table class="db-table">
+              <thead>
+                <tr>
+                  <th>Booking ID</th>
+                  
+                  <th>Patient Name</th>
+                  <th>Mobile Number</th>
+                  <th>Doctor</th>
+                  <th>Date & Time Slot</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="receptionist-search-tbody">
+                <!-- Filled dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- Toast Notification Overlay -->
+  <div class="toast-msg" id="toast-notification">
+    <i class="fa-solid fa-circle-check" style="color:#10b981; font-size:1.2rem;"></i>
+    <span id="toast-text">Success message</span>
+  </div>
+
+  <!-- Load Scripts -->
+  <script src="js/sync.js?v=6"></script>
+  <script src="js/init.js?v=6"></script>
+  <script src="js/receptionist.js?v=6"></script>
+</body>
+</html>

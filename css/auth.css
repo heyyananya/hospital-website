@@ -1,0 +1,288 @@
+/* Palanpur Health Hub - Auth Portal Specific Styling */
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--grad-bg);
+}
+
+/* Header branding bar */
+.auth-header {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  padding: 0 5%;
+  border-bottom: 1px solid rgba(0, 102, 255, 0.05);
+  background: transparent;
+}
+
+.auth-header .logo {
+  font-size: 1.4rem;
+}
+
+/* Auth Center Container */
+.auth-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 480px;
+  padding: 40px;
+  background: var(--white);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+}
+
+.auth-logo-box {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.auth-logo-box i {
+  font-size: 2.5rem;
+  color: var(--primary);
+  margin-bottom: 15px;
+  filter: drop-shadow(0 4px 10px rgba(0, 102, 255, 0.2));
+}
+
+.auth-logo-box h2 {
+  font-size: 1.6rem;
+  color: var(--dark);
+  margin-bottom: 5px;
+}
+
+.auth-logo-box p {
+  font-size: 0.85rem;
+}
+
+/* Segmented Toggle Control */
+.auth-toggle-group {
+  position: relative;
+  display: flex;
+  background: rgba(0, 102, 255, 0.05);
+  border-radius: 30px;
+  padding: 4px;
+  margin-bottom: 30px;
+  border: 1px solid rgba(0, 102, 255, 0.1);
+  overflow: hidden;
+}
+
+.auth-toggle-btn {
+  position: relative;
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 12px 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: color 0.3s ease;
+}
+
+.auth-toggle-btn.active {
+  color: var(--primary);
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  background: var(--white);
+  border-radius: 26px;
+  box-shadow: 0 4px 10px rgba(0, 102, 255, 0.1);
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.auth-toggle-group.staff-active .toggle-slider {
+  transform: translateX(100%);
+}
+
+/* Forms layout inside auth */
+.auth-panels-container {
+  margin-bottom: 25px;
+}
+
+.auth-form-panel {
+  display: none;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.auth-form-panel.active {
+  display: flex;
+}
+
+.auth-panel-header {
+  margin-bottom: 5px;
+}
+
+.auth-panel-header h3 {
+  font-size: 1.1rem;
+  color: var(--dark);
+  margin-bottom: 5px;
+}
+
+.auth-panel-header p {
+  font-size: 0.8rem;
+}
+
+.demo-credentials-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: rgba(0, 102, 255, 0.04);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px dashed rgba(0, 102, 255, 0.15);
+  margin-top: -5px;
+}
+
+.demo-credentials-label code {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.otp-stage {
+  animation: slideDown 0.3s ease-out;
+}
+
+.otp-hint-msg {
+  font-size: 0.78rem;
+  color: var(--status-available);
+  background: rgba(16, 185, 129, 0.08);
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.auth-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  transition: var(--transition);
+  margin-top: 15px;
+}
+
+.auth-back-link:hover {
+  color: var(--primary);
+  transform: translateX(-3px);
+}
+
+/* Footer branding */
+.auth-footer {
+  text-align: center;
+  padding: 20px;
+  border-top: 1px solid rgba(0, 102, 255, 0.05);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Animations duplication for standalone */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Responsive adjustments for mobile viewports */
+@media (max-width: 480px) {
+  /* Prevent iOS focus auto-zoom */
+  input, select, textarea, .form-control {
+    font-size: 16px !important;
+  }
+
+  .auth-header {
+    height: 70px;
+    padding: 0 4%;
+  }
+
+  .auth-header .logo {
+    font-size: 1.1rem;
+  }
+
+  .auth-main {
+    padding: 20px 10px;
+  }
+
+  .auth-card {
+    padding: 25px 15px;
+    border-radius: var(--border-radius);
+  }
+
+  .auth-logo-box {
+    margin-bottom: 20px;
+  }
+
+  .auth-logo-box i {
+    font-size: 2rem;
+    margin-bottom: 10px;
+  }
+
+  .auth-logo-box h2 {
+    font-size: 1.35rem;
+  }
+
+  .auth-toggle-group {
+    margin-bottom: 20px;
+  }
+
+  .auth-toggle-btn {
+    font-size: 0.8rem;
+    padding: 10px 2px;
+    gap: 4px;
+  }
+  
+  .auth-toggle-btn i {
+    font-size: 0.85rem;
+  }
+
+  .auth-form-panel {
+    gap: 15px;
+  }
+
+  .auth-panel-header h3 {
+    font-size: 1rem;
+  }
+}
+
+.doc-reg-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 576px) {
+  .doc-reg-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}

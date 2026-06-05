@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Superspeciality Doctors Consultation - Patient Portal dashboard. View active bookings, and reschedule appointments.">
+  <title>Patient Dashboard | Superspeciality Doctors Consultation</title>
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  
+  <!-- Custom Styling -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+  <div class="dashboard-wrapper">
+    <!-- Sidebar Navigation -->
+    <aside class="dashboard-sidebar" id="dashboard-sidebar">
+      <div class="sidebar-logo">
+        <i class="fa-solid fa-heart-pulse"></i>
+        <div class="logo-text">
+          <span>Superspeciality</span>
+          <span>Doctors</span>
+          <span>Consultation</span>
+        </div>
+      </div>
+
+      <ul class="sidebar-nav">
+        <li>
+          <button class="sidebar-nav-btn active" data-db-tab="patient-home">
+            <i class="fa-solid fa-house-medical"></i> <span>Home Dashboard</span>
+          </button>
+        </li>
+        <li>
+          <button class="sidebar-nav-btn" data-db-tab="patient-history">
+            <i class="fa-solid fa-clock-rotate-left"></i> <span>Visit History</span>
+          </button>
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <!-- Inline Patient Avatar drawing SVG -->
+          <svg viewBox="0 0 100 100" width="38" height="38">
+            <circle cx="50" cy="50" r="48" fill="#38bdf8"/>
+            <path d="M50,15 C60,15 68,23 68,33 C68,43 60,51 50,51 C40,51 32,43 32,33 C32,23 40,15 50,15 Z M20,80 C20,65 32,58 50,58 C68,58 80,65 80,80 Z" fill="#ffffff"/>
+          </svg>
+          <div class="sidebar-user-info">
+            <span class="sidebar-user-name" id="patient-db-user-name">Guest Patient</span>
+            <span class="sidebar-user-role">Patient Portal</span>
+          </div>
+        </div>
+        <button class="btn btn-secondary w-100" id="patient-logout" style="border-color: rgba(255,255,255,0.15); color: #fff; padding: 10px;">
+          <i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Content -->
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <button class="sidebar-toggle-btn" id="sidebar-toggle-trigger" style="display: none; background: none; border: none; font-size: 1.5rem; color: var(--dark); cursor: pointer; padding: 5px; align-items: center; justify-content: center; border-radius: 6px; transition: background-color 0.2s;">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="dashboard-welcome">
+            <h2 id="patient-db-welcome-heading">Welcome, Patient!</h2>
+            <p>Manage appointments, check waiting lists, and view clinical history.</p>
+          </div>
+        </div>
+        <a href="index.html" class="btn btn-secondary" style="padding: 10px 20px;">
+          <i class="fa-solid fa-house"></i> Back to Homepage
+        </a>
+      </header>
+
+      <!-- Panel: Home -->
+      <div class="dashboard-body-panel active" id="db-panel-patient-home">
+        
+        <!-- Notifications Alert Box -->
+        <div id="patient-notifications-box" style="display: none; margin-bottom: 25px;"></div>
+        
+        <!-- Live widgets -->
+        <div class="db-stats-grid">
+          <div class="glass-card db-stat-card">
+            <div class="db-stat-icon"><i class="fa-solid fa-calendar-check"></i></div>
+            <div class="db-stat-info">
+              <h4 id="pat-stat-count">0</h4>
+              <p>Active Appointments</p>
+            </div>
+          </div>
+          <div class="glass-card db-stat-card" id="patient-profile-card">
+            <div class="db-stat-icon" style="color: var(--secondary); background: rgba(0, 240, 255, 0.08);"><i class="fa-solid fa-id-card"></i></div>
+            <div class="db-stat-info" style="width: 100%;">
+              <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--dark); margin-bottom: 6px;">Profile Details</h4>
+              <p style="font-size: 0.8rem; color: var(--text-primary); margin-bottom: 2px;"><strong>Name:</strong> <span id="pat-profile-name">N/A</span></p>
+              <p style="font-size: 0.8rem; color: var(--text-primary); margin-bottom: 2px;"><strong>Phone:</strong> <span id="pat-profile-phone">N/A</span></p>
+              <p style="font-size: 0.8rem; color: var(--text-primary); margin-bottom: 0;"><strong>Email:</strong> <span id="pat-profile-email">N/A</span></p>
+            </div>
+          </div>
+        </div>
+
+
+
+        <!-- Dynamic Appointment Cards Section -->
+        <div id="patient-active-cards-section" style="margin-top: 30px;"></div>
+
+      </div>
+
+
+
+      <!-- Panel: Visit History -->
+      <div class="dashboard-body-panel" id="db-panel-patient-history">
+        <div class="db-table-box">
+          <div class="db-table-header">
+            <h3>Diagnostic Consultation Log</h3>
+          </div>
+          <div class="db-table-responsive">
+            <table class="db-table">
+              <thead>
+                <tr>
+                  <th>Booking ID</th>
+                  <th>Specialist Name</th>
+                  <th>Date</th>
+                  <th>Time Slot</th>
+                  <th>Status</th>
+                  <th>Receipt</th>
+                </tr>
+              </thead>
+              <tbody id="patient-all-appointments-tbody">
+                <!-- JS Inject -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+
+
+    </main>
+  </div>
+
+  <!-- Cancel Confirmation Modal -->
+  <div class="modal-overlay" id="cancel-confirm-modal" style="display:none; justify-content:center; align-items:center; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.4); backdrop-filter:blur(5px); z-index:1000;">
+    <div class="glass-card modal-card" style="max-width:400px; padding:30px; text-align:center; animation: zoomIn 0.3s ease-out;">
+      <div style="font-size:3rem; color:var(--status-busy); margin-bottom:15px;"><i class="fa-solid fa-circle-exclamation"></i></div>
+      <h3 style="font-size:1.3rem; margin-bottom:12px; color:var(--dark);">Cancel Appointment?</h3>
+      <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.5; margin-bottom:25px;">Are you sure you want to cancel this appointment? This action will cancel your booking and reopen the slot automatically.</p>
+      <div style="display:flex; gap:12px;">
+        <button class="btn btn-secondary w-100" id="cancel-keep-btn" style="padding:12px; cursor:pointer;">Keep Appointment</button>
+        <button class="btn btn-primary w-100" id="cancel-confirm-btn" style="padding:12px; background:var(--status-busy); border-color:var(--status-busy); cursor:pointer;">Yes, Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reschedule Modal -->
+  <div class="modal-overlay" id="reschedule-modal" style="display:none; justify-content:center; align-items:center; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.4); backdrop-filter:blur(5px); z-index:1000;">
+    <div class="glass-card modal-card" style="max-width:500px; width: 90%; padding:30px; animation: zoomIn 0.3s ease-out;">
+      <h3 style="font-size:1.3rem; margin-bottom:10px; color:var(--dark);"><i class="fa-solid fa-calendar-days"></i> Reschedule Appointment</h3>
+      <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:20px;">Choose a new date and time slot for your consultation. Your old slot will automatically reopen.</p>
+      
+      <div class="form-group" style="position:relative; margin-bottom:20px;">
+        <select id="reschedule-date" class="form-control" required>
+          <option value="" disabled selected></option>
+        </select>
+        <label for="reschedule-date" class="floating-label">Select Date</label>
+      </div>
+
+      <div class="form-group" id="reschedule-slots-wrapper" style="margin-top:15px; display:none;">
+        <div style="background: rgba(0, 102, 255, 0.04); border: 1px solid rgba(0, 102, 255, 0.15); padding: 12px; border-radius: var(--border-radius-md);">
+          <span style="font-size:0.8rem; color:var(--text-secondary); font-weight:600; display:block; margin-bottom:4px;">Consultation Timings:</span>
+          <span id="reschedule-hours-display" style="font-size:1.15rem; font-weight:800; color:var(--dark);">10:00 AM - 05:00 PM</span>
+        </div>
+      </div>
+
+      <input type="hidden" id="reschedule-selected-slot">
+      <input type="hidden" id="reschedule-appt-id">
+
+      <div style="display:flex; gap:12px; margin-top:25px;">
+        <button class="btn btn-secondary w-100" id="reschedule-close-btn" style="padding:12px; cursor:pointer;">Cancel</button>
+        <button class="btn btn-primary w-100" id="reschedule-confirm-btn" style="padding:12px; cursor:pointer;" disabled>Confirm Slot</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- Dashboard Script Logic -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="js/sync.js?v=6"></script>
+  <script src="js/init.js?v=6"></script>
+  <script src="js/patient.js?v=6"></script>
+</body>
+</html>

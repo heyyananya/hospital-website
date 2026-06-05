@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Superspeciality Doctors Consultation - Smart Hospital Ecosystem and Patient Portal. Book appointments, track token queues, and consult doctors.">
+  <title>Superspeciality Doctors Consultation | Smart Healthcare Ecosystem</title>
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  
+  <!-- AOS Animation Library -->
+  <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+  
+  <!-- Custom Styling -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Loading Screen -->
+  <div class="loader-wrapper" id="loader">
+    <div class="loader-logo">
+      <i class="fa-solid fa-heart-pulse"></i>
+      <span>Superspeciality <span class="logo-accent">Doctors Consultation</span></span>
+    </div>
+    <div class="loader-spinner"></div>
+  </div>
+
+  <!-- Background blobs -->
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
+  <div class="bg-blob blob-3"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="#" class="logo">
+        <i class="fa-solid fa-heart-pulse logo-icon"></i>
+        <div class="logo-text" data-translate="brand-logo">
+          <span class="logo-top">Superspeciality</span>
+          <span class="logo-accent logo-bottom">Doctors Consultation</span>
+        </div>
+      </a>
+      
+      <ul class="nav-links" id="nav-links">
+        <li><a href="#" class="nav-item active" data-translate="nav-home">Home</a></li>
+        <li><a href="#departments" class="nav-item" data-translate="nav-depts">Departments</a></li>
+        <li><a href="#doctors" class="nav-item" data-translate="nav-docs">Doctors</a></li>
+        <li><a href="#features" class="nav-item" data-translate="nav-features">Features</a></li>
+        <li><a href="#faq" class="nav-item" data-translate="nav-faq">FAQ</a></li>
+        <li><a href="#contact" class="nav-item" data-translate="nav-contact">Contact</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <!-- Language Switcher -->
+        <div class="lang-selector" id="lang-selector">
+          <div class="lang-btn" id="lang-btn">
+            <i class="fa-solid fa-globe"></i>
+            <span id="current-lang">EN</span>
+            <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem;"></i>
+          </div>
+          <div class="lang-dropdown" id="lang-dropdown">
+            <span class="lang-option" data-lang="en">English</span>
+            <span class="lang-option" data-lang="gu">ગુજરાતી</span>
+            <span class="lang-option" data-lang="hi">हिन्दी</span>
+          </div>
+        </div>
+
+        <a href="portal-login.html" class="btn btn-primary" id="portal-trigger">
+          <span class="desktop-only-text" data-translate="btn-portal">Portal</span>
+          <span class="mobile-only-text">LOGIN</span>
+        </a>
+        
+        <div class="mobile-toggle" id="mobile-toggle">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="hero" id="home">
+    <div class="container hero-grid">
+      <div class="hero-content" data-aos="fade-right" data-aos-duration="1000">
+        <div class="badge-tag">
+          <i class="fa-solid fa-sparkles"></i>
+          <span data-translate="hero-badge">Smart Healthcare Management Ecosystem</span>
+        </div>
+        <h1 id="hero-heading">Superspeciality <br><span>Doctors Consultation</span></h1>
+        <p data-translate="hero-p">Your Health. Our Priority. Discover top doctors, manage bookings, check live doctor statuses, and track token queue timing instantly in Palanpur.</p>
+        <div class="hero-actions">
+          <a href="#appointment" class="btn btn-primary btn-ripple" data-translate="hero-cta-book">Book Appointment</a>
+          <a href="#doctors" class="btn btn-secondary btn-ripple" data-translate="hero-cta-find">Find Doctors</a>
+        </div>
+        
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-num" data-val="500">0</span>
+            <span class="stat-label" data-translate="stat-patients">Happy Patients / Day</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-num" data-val="25">0</span>
+            <span class="stat-label" data-translate="stat-docs">Specialist Doctors</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-num" data-val="10">0</span>
+            <span class="stat-label" data-translate="stat-depts">Departments</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="hero-image-wrapper" data-aos="fade-left" data-aos-duration="1000">
+        <div class="hero-img-bg-blob"></div>
+        
+        <!-- Glowing SaaS background decorations -->
+        <div class="glow-particle gp-1"></div>
+        <div class="glow-particle gp-2"></div>
+        <div class="glow-particle gp-3"></div>
+
+        <!-- SVG Healthcare Illustration -->
+        <svg class="hero-image floating-element" viewBox="0 0 500 500" width="100%" height="auto">
+          <defs>
+            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#0066FF;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#00F0FF;stop-opacity:1" />
+            </linearGradient>
+            <filter id="shadow-hero" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0066FF" flood-opacity="0.15" />
+            </filter>
+          </defs>
+          <!-- Background grids and shapes -->
+          <circle cx="250" cy="250" r="180" fill="rgba(0, 102, 255, 0.05)" />
+          <rect x="180" y="100" width="140" height="300" rx="70" fill="url(#grad1)" opacity="0.1" />
+          
+          <!-- Animated Medical Cross Emblem -->
+          <g transform="translate(250, 250)" class="medical-cross-container">
+            <circle cx="0" cy="0" r="90" fill="url(#grad1)" filter="url(#shadow-hero)" class="cross-outer-pulse"/>
+            <path d="M-15,-35 H15 V-15 H35 V15 H15 V35 H-15 V15 H-35 V-15 H-15 Z" fill="#ffffff" class="cross-inner-emblem" />
+            <circle cx="0" cy="0" r="10" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" />
+          </g>
+          
+          <!-- Animated Pulse Graph lines -->
+          <path id="heartbeat-line" d="M 50 380 L 120 380 L 140 340 L 160 410 L 180 370 L 200 390 L 220 380 L 300 380 L 320 350 L 340 400 L 360 380 L 450 380" 
+                fill="none" stroke="#00F0FF" stroke-width="4" stroke-linecap="round" opacity="0.8" />
+          <circle cx="160" cy="410" r="5" fill="#0066FF" class="heartbeat-dot" />
+          <circle cx="340" cy="400" r="5" fill="#00F0FF" class="heartbeat-dot" />
+          
+          <!-- Small Floating icons -->
+          <g transform="translate(90, 130)" class="floating-element" style="animation-delay: 1s;">
+            <circle cx="0" cy="0" r="25" fill="#fff" filter="url(#shadow-hero)"/>
+            <path d="M-8,-8 H8 V8 H-8 Z" fill="none" stroke="#0066FF" stroke-width="2" />
+            <path d="M-4,0 H4 M0,-4 V4" stroke="#0066FF" stroke-width="2"/>
+          </g>
+          
+          <g transform="translate(380, 140)" class="floating-element" style="animation-delay: 2s;">
+            <circle cx="0" cy="0" r="25" fill="#fff" filter="url(#shadow-hero)"/>
+            <path d="M-8,-4 C-8,-4 -5,-10 0,-10 C5,-10 8,-4 8,-4 C8,-4 5,2 0,2 C-5,2 -8,-4 -8,-4 Z" fill="none" stroke="#0066FF" stroke-width="2"/>
+            <circle cx="0" cy="-4" r="3" fill="#0066FF"/>
+          </g>
+
+          <g transform="translate(420, 280)" class="floating-element" style="animation-delay: 0.5s;">
+            <circle cx="0" cy="0" r="25" fill="#fff" filter="url(#shadow-hero)"/>
+            <i class="fa-solid fa-stethoscope" style="color: #0066FF; font-size: 14px;"></i>
+          </g>
+        </svg>
+        
+        <!-- Dynamic Floating Doctor cards -->
+        <div id="hero-fdc-1" class="floating-doc-card fdc-1">
+          <!-- Content populated dynamically via JS -->
+        </div>
+        
+        <div id="hero-fdc-2" class="floating-doc-card fdc-2">
+          <!-- Content populated dynamically via JS -->
+        </div>
+      </div>
+    </div>
+  </header>
+
+
+
+  <!-- 4. Departments Section -->
+  <section class="section" id="departments">
+    <div class="container">
+      <div class="section-header" data-aos="fade-up">
+        <h2 data-translate="depts-title">Specialist Departments</h2>
+        <p data-translate="depts-p">Comprehensive premium medical services mapping all human health layers under one digital roof.</p>
+      </div>
+
+      <div class="departments-grid">
+        <!-- Cardiology -->
+        <div class="glass-card dept-card" data-dept="Cardiology" data-aos="fade-up" data-aos-delay="50">
+          <span class="dept-badge" data-translate="badge-cardio">Cardio</span>
+          <div class="dept-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+          <h3 data-translate="dept-cardio">Cardiology</h3>
+          <p data-translate="dept-cardio-desc">Heart treatments, angiography, valve repair, and cardiology emergency.</p>
+        </div>
+        <!-- Neurology -->
+        <div class="glass-card dept-card" data-dept="Neurology" data-aos="fade-up" data-aos-delay="100">
+          <span class="dept-badge" data-translate="badge-neuro">Neuro</span>
+          <div class="dept-icon"><i class="fa-solid fa-brain"></i></div>
+          <h3 data-translate="dept-neuro">Neurology</h3>
+          <p data-translate="dept-neuro-desc">Brain stroke, nerve disorder, spinal treatments, and migraine analysis.</p>
+        </div>
+        <!-- Pulmonology -->
+        <div class="glass-card dept-card" data-dept="Pulmonology" data-aos="fade-up" data-aos-delay="150">
+          <span class="dept-badge" data-translate="badge-respiratory">Respiratory</span>
+          <div class="dept-icon"><i class="fa-solid fa-lungs"></i></div>
+          <h3 data-translate="dept-pulmo">Pulmonology</h3>
+          <p data-translate="dept-pulmo-desc">Chronic asthma, tuberculosis, chest allergy, and severe cough checkups.</p>
+        </div>
+        <!-- Psychology -->
+        <div class="glass-card dept-card" data-dept="Psychology" data-aos="fade-up" data-aos-delay="200">
+          <span class="dept-badge" data-translate="badge-mental">Mental Health</span>
+          <div class="dept-icon"><i class="fa-solid fa-face-smile"></i></div>
+          <h3 data-translate="dept-psych">Psychology</h3>
+          <p data-translate="dept-psych-desc">Anxiety, severe stress counselling, depression sessions, and therapy.</p>
+        </div>
+        <!-- Orthopedics -->
+        <div class="glass-card dept-card" data-dept="Orthopedics" data-aos="fade-up" data-aos-delay="250">
+          <span class="dept-badge" data-translate="badge-bones">Bones</span>
+          <div class="dept-icon"><i class="fa-solid fa-bone"></i></div>
+          <h3 data-translate="dept-ortho">Orthopedics</h3>
+          <p data-translate="dept-ortho-desc">Joint replacements, fracture correction, bone scan, and pain rehab.</p>
+        </div>
+        <!-- Dermatology -->
+        <div class="glass-card dept-card" data-dept="Dermatology" data-aos="fade-up" data-aos-delay="300">
+          <span class="dept-badge" data-translate="badge-skin">Skin</span>
+          <div class="dept-icon"><i class="fa-solid fa-hand-holding-medical"></i></div>
+          <h3 data-translate="dept-derm">Dermatology</h3>
+          <p data-translate="dept-derm-desc">Skin allergies, laser treatment, acne cures, and cosmetic checkups.</p>
+        </div>
+        <!-- ENT -->
+        <div class="glass-card dept-card" data-dept="ENT" data-aos="fade-up" data-aos-delay="350">
+          <span class="dept-badge" data-translate="badge-ent">ENT</span>
+          <div class="dept-icon"><i class="fa-solid fa-ear-deaf"></i></div>
+          <h3 data-translate="dept-ent">ENT</h3>
+          <p data-translate="dept-ent-desc">Ear operations, throat infections, sinus tracking, and hearing checks.</p>
+        </div>
+        <!-- Pediatrics -->
+        <div class="glass-card dept-card" data-dept="Pediatrics" data-aos="fade-up" data-aos-delay="400">
+          <span class="dept-badge" data-translate="badge-child">Child</span>
+          <div class="dept-icon"><i class="fa-solid fa-baby"></i></div>
+          <h3 data-translate="dept-ped">Pediatrics</h3>
+          <p data-translate="dept-ped-desc">Newborn care, infant vaccination, growth tracking, and child fever.</p>
+        </div>
+        <!-- Gynecology -->
+        <div class="glass-card dept-card" data-dept="Gynecology" data-aos="fade-up" data-aos-delay="450">
+          <span class="dept-badge" data-translate="badge-women">Women</span>
+          <div class="dept-icon"><i class="fa-solid fa-person-pregnant"></i></div>
+          <h3 data-translate="dept-gyn">Gynecology</h3>
+          <p data-translate="dept-gyn-desc">Pregnancy support, women's wellness, ultrasound checkups, and delivery.</p>
+        </div>
+        <!-- General Medicine -->
+        <div class="glass-card dept-card" data-dept="General Medicine" data-aos="fade-up" data-aos-delay="500">
+          <span class="dept-badge" data-translate="badge-general">General</span>
+          <div class="dept-icon"><i class="fa-solid fa-briefcase-medical"></i></div>
+          <h3 data-translate="dept-general">General Medicine</h3>
+          <p data-translate="dept-general-desc">Blood pressure, standard viral infections, primary health reports.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Live Doctor Status Legend Widget -->
+  <section class="container">
+    <div class="live-status-section" data-aos="zoom-in">
+      <div class="live-status-container">
+        <div class="live-status-desc">
+          <h3 data-translate="live-status-title">Live Hospital Tracker</h3>
+          <p data-translate="live-status-p">Check real-time indicators of doctor availability in Superspeciality Doctors Consultation to plan your visit without queuing delays.</p>
+        </div>
+        <div class="status-legend">
+          <div class="legend-item">
+            <span class="legend-badge available" data-translate="status-avail">● Available</span>
+            <span data-translate="legend-avail-desc">Doctor is actively consultation-ready</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-badge busy" data-translate="status-busy">● Busy</span>
+            <span data-translate="legend-busy-desc">Doctor is in emergency or operations</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-badge late" data-translate="status-late">● Running Late</span>
+            <span data-translate="legend-late-desc">Consultation running ~15-30 mins behind</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-badge left" data-translate="status-left">● Left Hospital</span>
+            <span data-translate="legend-left-desc">Doctor has completed visiting shift</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Doctors Section -->
+  <section class="section" id="doctors">
+    <div class="container">
+      <div class="section-header" data-aos="fade-up">
+        <h2 data-translate="docs-title">Our Expert Specialists</h2>
+        <p data-translate="docs-p">Choose doctors dynamically based on specialized departments and schedule slots instantly.</p>
+      </div>
+
+      <!-- Filters (Rendered via React component) -->
+      <div id="specialties-filter-root" class="w-full mb-[45px]" data-aos="fade-up"></div>
+
+      <!-- Doctors Grid -->
+      <div class="doctors-grid" id="doctors-grid">
+        <!-- Dynamically rendered doctor cards -->
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. & 8. Appointment Booking Section -->
+  <section class="section" id="appointment">
+    <div class="container">
+      <div class="section-header" data-aos="fade-up">
+        <h2 data-translate="booking-title">Book Clinic Slot</h2>
+        <p data-translate="booking-p">Register your medical profile, pick slots, finalize fees and generate a smart hospital token.</p>
+      </div>
+
+      <div class="appointment-grid">
+        <!-- Left Column: Form -->
+        <div class="glass-card booking-form-box" data-aos="fade-up">
+          <h3 class="form-title" data-translate="form-heading">Appointment Details</h3>
+          <form id="appointment-form" class="contact-form">
+            <div class="form-grid">
+              
+              <!-- Patient Name -->
+              <div class="form-group">
+                <input type="text" id="book-name" class="form-control" required>
+                <label for="book-name" class="floating-label" data-translate="form-name">Patient Full Name</label>
+              </div>
+
+              <!-- Mobile -->
+              <div class="form-group">
+                <input type="tel" id="book-phone" class="form-control" required pattern="[0-9]{10}">
+                <label for="book-phone" class="floating-label" data-translate="form-phone">Mobile Number</label>
+              </div>
+
+              <!-- Email -->
+              <div class="form-group">
+                <input type="email" id="book-email" class="form-control">
+                <label for="book-email" class="floating-label" data-translate="form-email">Email Address (Optional)</label>
+              </div>
+
+              <!-- Department -->
+              <div class="form-group">
+                <select id="book-dept" class="form-control" required>
+                  <option value="" disabled selected></option>
+                  <option value="Cardiology">Cardiology</option>
+                  <option value="Neurology">Neurology</option>
+                  <option value="Pulmonology">Pulmonology</option>
+                  <option value="Psychology">Psychology</option>
+                  <option value="Orthopedics">Orthopedics</option>
+                  <option value="Dermatology">Dermatology</option>
+                  <option value="ENT">ENT</option>
+                  <option value="Pediatrics">Pediatrics</option>
+                  <option value="Gynecology">Gynecology</option>
+                  <option value="General Medicine">General Medicine</option>
+                </select>
+                <label for="book-dept" class="floating-label" data-translate="form-dept">Select Department</label>
+              </div>
+
+              <!-- Doctor Selection -->
+              <div class="form-group">
+                <select id="book-doctor" class="form-control" required>
+                  <option value="" disabled selected></option>
+                  <!-- Dynamically populated -->
+                </select>
+                <label for="book-doctor" class="floating-label" data-translate="form-doctor">Select Specialist Doctor</label>
+              </div>
+
+              <!-- Date Picker Select -->
+              <div class="form-group" id="book-date-wrapper">
+                <select id="book-date" class="form-control" required>
+                  <option value="" disabled selected></option>
+                </select>
+                <label for="book-date" class="floating-label" data-translate="form-date">Appointment Date</label>
+              </div>
+
+              <!-- Time Slot Hidden -->
+              <div class="form-group" style="display:none;">
+                <input type="hidden" id="book-time" required>
+              </div>
+
+              <!-- Interactive Slots Selection Grid -->
+              <div class="form-group form-group-full" id="slots-grid-wrapper" style="display:none; margin-top:10px;">
+                <div style="background: rgba(0, 102, 255, 0.04); border: 1px solid rgba(0, 102, 255, 0.15); padding: 15px; border-radius: var(--border-radius-md); display: flex; flex-direction: column; gap: 8px;">
+                  <span style="font-weight:700; font-size:0.95rem; color:var(--primary); display:flex; align-items:center; gap:6px;">
+                    <i class="fa-solid fa-clock"></i> Consultation Timing Range
+                  </span>
+                  <span id="book-consultation-hours-display" style="font-size:1.15rem; font-weight:800; color:var(--dark);">
+                    10:00 AM - 05:00 PM
+                  </span>
+                  <p style="font-size:0.8rem; color:var(--text-secondary); line-height:1.4; margin: 0;">
+                    Appointments are booked for the chosen date. Sequential waitlist token numbers are issued, running in order of booking during consultation hours.
+                  </p>
+                </div>
+                <div id="doctor-running-late-warning" class="doctor-warning-notice" style="display:none; margin-top:12px;">
+                  <i class="fa-solid fa-triangle-exclamation"></i>
+                  <span>Warning: Doctor is running late today. Consultations are delayed by 15-30 minutes.</span>
+                </div>
+              </div>
+
+              <!-- Consultation Fee Mock -->
+              <div class="form-group" id="book-fee-container">
+                <input type="text" id="book-fee" class="form-control" readonly value="">
+                <label for="book-fee" class="floating-label" data-translate="form-fee">Consultation Fees</label>
+              </div>
+
+              <!-- Symptoms TextArea -->
+              <div class="form-group form-group-full">
+                <textarea id="book-symptoms" class="form-control" rows="3" required></textarea>
+                <label for="book-symptoms" class="floating-label" data-translate="form-symptoms">Symptom details or disease notes</label>
+              </div>
+
+            </div>
+            
+            <button type="submit" class="btn btn-primary booking-submit-btn btn-ripple" data-translate="btn-proceed-pay">
+              Proceed To Payment (Razorpay)
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. Features Section -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-header" data-aos="fade-up">
+        <h2 data-translate="features-title">Modern Digital Ecosystem Features</h2>
+        <p data-translate="features-p">A full patient experience workflow powered by premium technologies.</p>
+      </div>
+
+      <div class="features-grid">
+        <!-- Instant Booking -->
+        <div class="glass-card feature-card" data-aos="fade-up" data-aos-delay="50">
+          <div class="feat-icon-box"><i class="fa-solid fa-calendar-check"></i></div>
+          <h3 data-translate="feat-booking">Instant Booking</h3>
+          <p data-translate="feat-booking-desc">Book appointments with top clinic specialists online in seconds.</p>
+        </div>
+        <!-- Online Payment -->
+        <div class="glass-card feature-card" data-aos="fade-up" data-aos-delay="100">
+          <div class="feat-icon-box"><i class="fa-solid fa-credit-card"></i></div>
+          <h3 data-translate="feat-pay">Online Payments</h3>
+          <p data-translate="feat-pay-desc">Integrated secure Razorpay gateway checks for seamless pay.</p>
+        </div>
+        <!-- Notifications -->
+        <div class="glass-card feature-card" data-aos="fade-up" data-aos-delay="150">
+          <div class="feat-icon-box"><i class="fa-solid fa-bell"></i></div>
+          <h3 data-translate="feat-noti">Real-time alerts</h3>
+          <p data-translate="feat-noti-desc">Automated emails matching consultations dates and delays.</p>
+        </div>
+        <!-- OTP Login -->
+        <div class="glass-card feature-card" data-aos="fade-up" data-aos-delay="200">
+          <div class="feat-icon-box"><i class="fa-solid fa-shield-halved"></i></div>
+          <h3 data-translate="feat-otp">Mobile/Email OTP</h3>
+          <p data-translate="feat-otp-desc">Dual verification layers securing personal diagnostic reports.</p>
+        </div>
+        <!-- Flexible Rescheduling -->
+        <div class="glass-card feature-card" data-aos="fade-up" data-aos-delay="250">
+          <div class="feat-icon-box"><i class="fa-solid fa-clock-rotate-left"></i></div>
+          <h3 data-translate="feat-reschedule">Flexible Rescheduling</h3>
+          <p data-translate="feat-reschedule-desc">Easy scheduling updates and cancellations directly from your dashboard.</p>
+        </div>
+        <!-- Multilingual -->
+        <div class="glass-card feature-card" data-aos="fade-up" data-aos-delay="300">
+          <div class="feat-icon-box"><i class="fa-solid fa-language"></i></div>
+          <h3 data-translate="feat-lang">Local Languages</h3>
+          <p data-translate="feat-lang-desc">Smooth platform switching: English, Gujarati, and Hindi.</p>
+        </div>
+        <!-- Live status -->
+        <div class="glass-card feature-card" data-aos="fade-up" data-aos-delay="350">
+          <div class="feat-icon-box"><i class="fa-solid fa-user-doctor"></i></div>
+          <h3 data-translate="feat-live">Live Doctor Status</h3>
+          <p data-translate="feat-live-desc">Simulated availability tracker indicating shift updates.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. Patient Testimonial Section -->
+  <section class="section" id="testimonials">
+    <div class="container">
+      <div class="section-header" data-aos="fade-up">
+        <h2 data-translate="test-title">Patient Testimonials</h2>
+        <p data-translate="test-p">Read feedback from our valued citizens about the Smart Hospital Platform.</p>
+      </div>
+
+      <div class="testimonial-container" data-aos="zoom-in">
+        <div class="testimonial-track">
+          <!-- Review 1 -->
+          <div class="glass-card testimonial-slide active">
+            <div class="testimonial-body">
+              <i class="fa-solid fa-quote-left quote-icon"></i>
+              <p class="test-text" data-translate="test-1-text">"Superspeciality Doctors Consultation saved me hours of clinic waiting. I booked cardiology from home, paid on Razorpay, and secured my consultation slot instantly!"</p>
+              <div class="test-patient">
+                <span class="test-name" data-translate="test-1-name">Kirtan Mehta</span>
+                <span class="test-city" data-translate="test-1-city">Palanpur, Gujarat</span>
+                <div class="test-rating">
+                  <i class="fa-solid fa-star"></i>
+                  <i class="fa-solid fa-star"></i>
+                  <i class="fa-solid fa-star"></i>
+                  <i class="fa-solid fa-star"></i>
+                  <i class="fa-solid fa-star"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Review 2 -->
+          <div class="glass-card testimonial-slide">
+            <div class="testimonial-body">
+              <i class="fa-solid fa-quote-left quote-icon"></i>
+              <p class="test-text" data-translate="test-2-text">"The disease mapping search is very clever. I searched 'cough' and it showed Pulmonology doctors. The Gujrati translation is fully accurate!"</p>
+              <div class="test-patient">
+                <span class="test-name" data-translate="test-2-name">Ramilaben Patel</span>
+                <span class="test-city" data-translate="test-2-city">Deesa Highway, Palanpur</span>
+                <div class="test-rating">
+                  <i class="fa-solid fa-star"></i>
+                  <i class="fa-solid fa-star"></i>
+                  <i class="fa-solid fa-star"></i>
+                  <i class="fa-solid fa-star"></i>
+                  <i class="fa-solid fa-star-half-stroke"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Review 3 -->
+          <div class="glass-card testimonial-slide">
+            <div class="testimonial-body">
+              <i class="fa-solid fa-quote-left quote-icon"></i>
+              <p class="test-text" data-translate="test-3-text">"I can log in as a Doctor and immediately edit my availability badge to 'Running Late'. Patients see changes instantly. Highly recommended SaaS workflow."</p>
+              <div class="test-patient">
+                <span class="test-name">Dr. Rajesh Shah</span>
+                <span class="test-city" data-translate="test-3-city">Senior Pulmonologist</span>
+                <div class="test-rating">
+                  <i class="fa-solid fa-star"></i>
+                  <i class="fa-solid fa-star"></i>
+                  <i class="fa-solid fa-star"></i>
+                  <i class="fa-solid fa-star"></i>
+                  <i class="fa-solid fa-star"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="testimonial-controls">
+          <div class="test-control-btn" id="test-prev"><i class="fa-solid fa-arrow-left"></i></div>
+          <div class="test-control-btn" id="test-next"><i class="fa-solid fa-arrow-right"></i></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. Gallery Section -->
+  <section class="section" id="gallery">
+    <div class="container">
+      <div class="section-header" data-aos="fade-up">
+        <h2 data-translate="gal-title">Inside Superspeciality Doctors Consultation</h2>
+        <p data-translate="gal-p">Our state-of-the-art emergency rooms, operating theatres, diagnostic labs and consulting chambers.</p>
+      </div>
+
+      <div class="gallery-grid">
+        <!-- Gallery 1 -->
+        <div class="gallery-item" data-aos="fade-up" data-aos-delay="50">
+          <svg viewBox="0 0 300 200" width="100%" height="100%">
+            <defs>
+              <linearGradient id="galgrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#0f2027;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#203a43;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#galgrad1)"/>
+            <text x="50%" y="45%" fill="#00F0FF" font-weight="700" text-anchor="middle" font-size="16">Emergency Ward</text>
+            <path d="M50 140 H250 M150 110 V170" stroke="#0066FF" stroke-width="4" stroke-linecap="round" opacity="0.3"/>
+            <text x="50%" y="85%" fill="#ffffff" opacity="0.6" font-size="10" text-anchor="middle">Click to Zoom</text>
+          </svg>
+          <div class="gallery-overlay">
+            <h3 data-translate="gal-1-h">Critical ICU Desk</h3>
+            <p data-translate="gal-1-p">24/7 ICU tracking panels and modern ventilators.</p>
+          </div>
+        </div>
+        
+        <!-- Gallery 2 -->
+        <div class="gallery-item" data-aos="fade-up" data-aos-delay="100">
+          <svg viewBox="0 0 300 200" width="100%" height="100%">
+            <rect width="100%" height="100%" fill="url(#galgrad1)"/>
+            <text x="50%" y="45%" fill="#00F0FF" font-weight="700" text-anchor="middle" font-size="16">Cardiology Unit</text>
+            <path d="M50 140 H250 M150 110 V170" stroke="#0066FF" stroke-width="4" stroke-linecap="round" opacity="0.3"/>
+            <text x="50%" y="85%" fill="#ffffff" opacity="0.6" font-size="10" text-anchor="middle">Click to Zoom</text>
+          </svg>
+          <div class="gallery-overlay">
+            <h3 data-translate="gal-2-h">Cath Lab O.T.</h3>
+            <p data-translate="gal-2-p">Advanced hybrid rooms for complex cardiac bypass operations.</p>
+          </div>
+        </div>
+
+        <!-- Gallery 3 -->
+        <div class="gallery-item" data-aos="fade-up" data-aos-delay="150">
+          <svg viewBox="0 0 300 200" width="100%" height="100%">
+            <rect width="100%" height="100%" fill="url(#galgrad1)"/>
+            <text x="50%" y="45%" fill="#00F0FF" font-weight="700" text-anchor="middle" font-size="16">MRI & Radiology</text>
+            <path d="M50 140 H250 M150 110 V170" stroke="#0066FF" stroke-width="4" stroke-linecap="round" opacity="0.3"/>
+            <text x="50%" y="85%" fill="#ffffff" opacity="0.6" font-size="10" text-anchor="middle">Click to Zoom</text>
+          </svg>
+          <div class="gallery-overlay">
+            <h3 data-translate="gal-3-h">3-Tesla Digital MRI</h3>
+            <p data-translate="gal-3-p">Fast scan tracking with minimal radiation diagnostic metrics.</p>
+          </div>
+        </div>
+
+        <!-- Gallery 4 -->
+        <div class="gallery-item" data-aos="fade-up" data-aos-delay="200">
+          <svg viewBox="0 0 300 200" width="100%" height="100%">
+            <rect width="100%" height="100%" fill="url(#galgrad1)"/>
+            <text x="50%" y="45%" fill="#00F0FF" font-weight="700" text-anchor="middle" font-size="16">OPD Waiting lounge</text>
+            <path d="M50 140 H250 M150 110 V170" stroke="#0066FF" stroke-width="4" stroke-linecap="round" opacity="0.3"/>
+            <text x="50%" y="85%" fill="#ffffff" opacity="0.6" font-size="10" text-anchor="middle">Click to Zoom</text>
+          </svg>
+          <div class="gallery-overlay">
+            <h3 data-translate="gal-4-h">Glass Reception Lounge</h3>
+            <p data-translate="gal-4-p">Premium waiting space equipped with easy token assistance counters.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12. FAQ Section -->
+  <section class="section" id="faq">
+    <div class="container">
+      <div class="faq-grid">
+        
+        <!-- Left Column: FAQ Information -->
+        <div class="faq-info" data-aos="fade-right">
+          <div class="badge-tag">
+            <i class="fa-solid fa-circle-question"></i>
+            <span>FAQ</span>
+          </div>
+          <h2 data-translate="faq-title">Frequently Asked Questions</h2>
+          <p data-translate="faq-p">Get quick responses regarding payments, OTP setup, and booking scheduling structures.</p>
+          
+          <div class="faq-support-card">
+            <i class="fa-solid fa-headset"></i>
+            <div>
+              <h4>Still have questions?</h4>
+              <p>Our 24/7 helpdesk team is here to assist you.</p>
+              <a href="#contact" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.82rem; border-radius: var(--border-radius-sm);">Contact Helpdesk</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Accordion -->
+        <div class="faq-accordion" data-aos="fade-left">
+          <div class="faq-item">
+            <div class="faq-question">
+              <h3 data-translate="faq-1-q">How do I book an appointment?</h3>
+              <span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span>
+            </div>
+            <div class="faq-answer">
+              <div class="faq-answer-content">
+                <p data-translate="faq-1-a">Simply choose your preferred doctor, select an available date and time slot, enter your basic patient details, and complete the registration. You will receive an instant confirmation of your booking.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <h3 data-translate="faq-2-q">Can I reschedule my appointment?</h3>
+              <span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span>
+            </div>
+            <div class="faq-answer">
+              <div class="faq-answer-content">
+                <p data-translate="faq-2-a">Yes, both patients and doctors can reschedule appointments. You can select a new available date and time slot from your dashboard, and the system will automatically release your old slot and book the new one.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <h3 data-translate="faq-3-q">Are the doctor availability statuses live?</h3>
+              <span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span>
+            </div>
+            <div class="faq-answer">
+              <div class="faq-answer-content">
+                <p data-translate="faq-3-a">Yes. Doctors and the hospital administration access their respective dashboards to update shift changes, operational emergencies, or delays. The badges on the homepage immediately reflect if a doctor is Available, Busy, or Running Late.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <h3 data-translate="faq-4-q">How do I switch the website language to Gujarati?</h3>
+              <span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span>
+            </div>
+            <div class="faq-answer">
+              <div class="faq-answer-content">
+                <p data-translate="faq-4-a">On the top navigation bar, locate the language switcher button (displaying 'EN'). Click it and select 'ગુજરાતી' or 'हिन्दी' to instantly translate the entire ecosystem, search prompts, and dashboards dynamically.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+  <!-- 13. Contact Section -->
+  <section class="section" id="contact">
+    <div class="container">
+      <div class="section-header" data-aos="fade-up">
+        <h2 data-translate="contact-title">Contact Hospital Helpdesk</h2>
+        <p data-translate="contact-p">Connect directly with our 24/7 helpline or drop a support inquiry ticket.</p>
+      </div>
+
+      <div class="contact-grid">
+        
+        <!-- Left: Contact Details and Map -->
+        <div class="contact-info-card" data-aos="fade-right">
+          <div class="contact-details-grid">
+            
+            <div class="contact-detail-item">
+              <div class="cd-icon"><i class="fa-solid fa-location-dot"></i></div>
+              <div class="cd-text">
+                <h4 data-translate="contact-h-loc">Hospital Location</h4>
+                <p data-translate="contact-p-loc">Superspeciality Doctors Consultation, Deesa Highway Crossroads, Palanpur, Gujarat - 385001</p>
+              </div>
+            </div>
+
+            <div class="contact-detail-item">
+              <div class="cd-icon"><i class="fa-solid fa-phone-volume"></i></div>
+              <div class="cd-text">
+                <h4 data-translate="contact-h-phone">24/7 Helpline</h4>
+                <a href="tel:+912742250001">+91 2742 250001</a> / <a href="tel:+919876543210">+91 98765 43210</a>
+              </div>
+            </div>
+
+            <div class="contact-detail-item">
+              <div class="cd-icon"><i class="fa-solid fa-envelope-open-text"></i></div>
+              <div class="cd-text">
+                <h4 data-translate="contact-h-email">Support Email</h4>
+                <a href="mailto:info@palanpurhealthhub.com">info@palanpurhealthhub.com</a>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Social connections -->
+          <div>
+            <h4 style="margin-bottom:10px; color: var(--dark);" data-translate="contact-h-connect">Connect with us</h4>
+            <div class="contact-socials">
+              <a href="#" class="social-circle"><i class="fa-brands fa-facebook-f"></i></a>
+              <a href="#" class="social-circle"><i class="fa-brands fa-instagram"></i></a>
+              <a href="#" class="social-circle"><i class="fa-brands fa-x-twitter"></i></a>
+              <a href="#" class="social-circle"><i class="fa-brands fa-whatsapp"></i></a>
+            </div>
+          </div>
+
+          <!-- Embedded Map -->
+          <div class="contact-map-box">
+            <iframe 
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14589.658826707328!2d72.41738734999999!3d24.17473725!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395ceb6e1c243f7b%3A0xe5a14d5e94b150!2sPalanpur%2C%20Gujarat!5e0!3m2!1sen!2sin!4v1680000000000!5m2!1sen!2sin" 
+              width="100%" 
+              height="100%" 
+              style="border:0;" 
+              allowfullscreen="" 
+              loading="lazy">
+            </iframe>
+          </div>
+        </div>
+
+        <!-- Right: Contact Form -->
+        <div class="glass-card contact-form-card" data-aos="fade-left">
+          <h3 class="form-title" data-translate="contact-form-title">Send Message</h3>
+          <form id="contact-form" class="contact-form">
+            <div class="form-group">
+              <input type="text" id="contact-name" class="form-control" required>
+              <label for="contact-name" class="floating-label" data-translate="form-name">Patient Full Name</label>
+            </div>
+
+            <div class="form-group">
+              <input type="email" id="contact-email" class="form-control">
+              <label for="contact-email" class="floating-label" data-translate="form-email">Email Address (Optional)</label>
+            </div>
+
+            <div class="form-group">
+              <input type="text" id="contact-subject" class="form-control" required>
+              <label for="contact-subject" class="floating-label" data-translate="contact-form-sub">Subject</label>
+            </div>
+
+            <div class="form-group">
+              <textarea id="contact-message" class="form-control" rows="5" required></textarea>
+              <label for="contact-message" class="floating-label" data-translate="contact-form-msg">Write message here...</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary booking-submit-btn btn-ripple" data-translate="btn-send">
+              Send Message
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 14. Premium Footer -->
+  <footer class="footer">
+    <div class="footer-grid">
+      
+      <!-- Brand column -->
+      <div class="footer-col">
+        <a href="#" class="logo" style="color: #fff;">
+          <i class="fa-solid fa-heart-pulse" style="color: var(--primary);"></i>
+          <span>Palanpur <span style="color: var(--primary);">Superspeciality Doctors Consultation</span></span>
+        </a>
+        <p class="footer-desc" data-translate="footer-desc-text">Integrating modern SaaS appointments, digital queue tracking, and real-time waiting tokens for local medical operations in Banaskantha.</p>
+        <p><i class="fa-solid fa-phone" style="color: var(--primary); margin-right: 8px;"></i> Emergency: <a href="tel:108">108</a> / <a href="tel:+912742250001">+91 2742 250001</a></p>
+      </div>
+
+      <!-- Links column -->
+      <div class="footer-col">
+        <h3 data-translate="footer-h-links">Quick Links</h3>
+        <ul class="footer-links">
+          <li><a href="#home"><i class="fa-solid fa-chevron-right" style="font-size:0.7rem;"></i> Home</a></li>
+          <li><a href="#departments"><i class="fa-solid fa-chevron-right" style="font-size:0.7rem;"></i> Departments</a></li>
+          <li><a href="#doctors"><i class="fa-solid fa-chevron-right" style="font-size:0.7rem;"></i> Doctors</a></li>
+          <li><a href="#appointment"><i class="fa-solid fa-chevron-right" style="font-size:0.7rem;"></i> Book Slot</a></li>
+          <li><a href="#faq"><i class="fa-solid fa-chevron-right" style="font-size:0.7rem;"></i> Help FAQ</a></li>
+        </ul>
+      </div>
+
+      <!-- Departments column -->
+      <div class="footer-col">
+        <h3 data-translate="footer-h-depts">Departments</h3>
+        <ul class="footer-links">
+          <li><a href="#departments"><i class="fa-solid fa-chevron-right" style="font-size:0.7rem;"></i> Cardiology</a></li>
+          <li><a href="#departments"><i class="fa-solid fa-chevron-right" style="font-size:0.7rem;"></i> Neurology</a></li>
+          <li><a href="#departments"><i class="fa-solid fa-chevron-right" style="font-size:0.7rem;"></i> Pulmonology</a></li>
+          <li><a href="#departments"><i class="fa-solid fa-chevron-right" style="font-size:0.7rem;"></i> Pediatrics</a></li>
+          <li><a href="#departments"><i class="fa-solid fa-chevron-right" style="font-size:0.7rem;"></i> Orthopedics</a></li>
+        </ul>
+      </div>
+
+      <!-- News letter column -->
+      <div class="footer-col">
+        <h3 data-translate="footer-h-news">Newsletter</h3>
+        <p style="font-size:0.85rem; color: rgba(255,255,255,0.6);" data-translate="footer-news-p">Stay updated with diagnostic camp alerts and healthcare newsletters.</p>
+        <form class="footer-news-form" id="newsletter-form">
+          <input type="email" placeholder="Your Email..." required>
+          <button type="submit">Join</button>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- Bottom line -->
+    <div class="footer-bottom">
+      <p>&copy; 2026 Superspeciality Doctors Consultation. All Rights Reserved. Designed for Smart Healthcare.</p>
+      <div class="footer-bottom-links">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms & Conditions</a>
+      </div>
+    </div>
+  </footer>
+
+
+
+
+  <!-- RAZORPAY SIMULATED CHECKOUT OVERLAY -->
+  <div class="razorpay-overlay" id="razorpay-overlay" style="display: none;">
+    <div class="razorpay-modal">
+      <div class="rp-header">
+        <div class="rp-title"><i class="fa-solid fa-shield-halved"></i> Razorpay Secure</div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <div class="rp-amount" id="rp-amount-display">₹500.00</div>
+          <button id="rp-close-btn" style="background: none; border: none; color: rgba(255,255,255,0.5); font-size: 1.2rem; cursor: pointer; transition: color 0.2s; display: inline-flex; align-items: center; justify-content: center; padding: 0;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
+      <div class="rp-body">
+        <div style="font-size:0.8rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">
+          <p><strong data-translate="brand">Superspeciality Doctors Consultation</strong></p>
+          <p style="color:rgba(255,255,255,0.6);" id="rp-desc-display">Consultation Token Payment</p>
+        </div>
+
+        <div class="rp-input-group">
+          <label>Card Number</label>
+          <input type="text" class="rp-input" placeholder="4111 2222 3333 4444" value="4111 2222 3333 4444">
+        </div>
+
+        <div class="rp-card-row">
+          <div class="rp-input-group">
+            <label>Expiry Date</label>
+            <input type="text" class="rp-input" placeholder="12 / 29" value="12/29">
+          </div>
+          <div class="rp-input-group">
+            <label>CVV</label>
+            <input type="password" class="rp-input" placeholder="123" value="123">
+          </div>
+        </div>
+
+        <button class="rp-btn" id="rp-pay-btn">Pay Now via Razorpay</button>
+        <p style="font-size:0.65rem; text-align:center; color:rgba(255,255,255,0.4);">This is a simulated Razorpay sandboxed payment. Press Pay to proceed.</p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- SUCCESS RECEIPT MODAL -->
+  <div class="modal-overlay" id="success-modal">
+    <div class="modal-content" style="max-width: 500px;">
+      <button class="modal-close-btn" id="success-modal-close"><i class="fa-solid fa-xmark"></i></button>
+      
+      <div class="success-popup">
+        <div class="success-icon-check"><i class="fa-solid fa-check"></i></div>
+        <h3 style="font-size:1.4rem; color: var(--status-available);" data-translate="receipt-success">Payment Confirmed!</h3>
+        <p style="font-size:0.85rem;" data-translate="receipt-sub">Your appointment has been registered in the smart queue. Please check in at the reception using your registered mobile number.</p>
+        
+        <!-- Receipt Details Box -->
+        <div style="width:100%; border:1px dashed var(--primary); border-radius:var(--border-radius-sm); padding:20px; text-align:left; background:rgba(0,102,255,0.02); font-size:0.85rem;" id="receipt-details-box">
+          <!-- Populated by JavaScript -->
+        </div>
+
+
+
+        <a href="patient-dashboard.html" class="btn btn-primary booking-submit-btn btn-ripple" id="receipt-dashboard-trigger" data-translate="receipt-btn-dashboard">
+          Go To Patient Dashboard
+        </a>
+        <button class="btn btn-secondary booking-submit-btn btn-ripple" id="download-success-receipt-btn" style="margin-top: 10px; border-color: var(--primary); color: var(--primary); background: transparent; font-weight: 700; width: 100%; height: 50px; border-radius: var(--border-radius-sm); display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <i class="fa-solid fa-file-pdf"></i> <span data-translate="btn-download-receipt">Download Payment Receipt</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- AOS script -->
+  <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+  <!-- jsPDF PDF Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Razorpay Checkout Integration SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <!-- Main Script -->
+  <script src="js/sync.js?v=6"></script>
+  <script src="js/init.js?v=6"></script>
+  <script src="js/script.js?v=6"></script>
+  <!-- React Specialties Filter -->
+  <script type="module" src="/src/specialties.jsx"></script>
+
+  <!-- INITIAL LANGUAGE SELECTOR MODAL -->
+  <div id="initial-lang-modal" class="modal-overlay" style="display: none; justify-content: center; align-items: center; z-index: 10000; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(12px); position: fixed; top: 0; left: 0; width: 100%; height: 100%;">
+    <!-- STEP 1: CHOOSE LANGUAGE -->
+    <div id="lang-step-1" class="modal-content lang-select-modal-content" style="max-width: 550px; padding: 40px; text-align: center; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border-radius: var(--border-radius-lg); box-shadow: var(--shadow-lg); width: 90%;">
+      <div class="lang-modal-header" style="margin-bottom: 30px;">
+        <i class="fa-solid fa-language" style="font-size: 3.5rem; color: var(--primary); margin-bottom: 15px; animation: pulse 2.5s infinite ease-in-out; display: inline-block;"></i>
+        <h2 style="font-size: 1.8rem; font-weight: 800; color: var(--dark); margin-bottom: 10px;">Select Language / ભાષા પસંદ કરો</h2>
+        <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5;">Please select your preferred language to continue.<br>આગળ વધવા માટે કૃપા કરીને તમારી મનપસંદ ભાષા પસંદ કરો.</p>
+      </div>
+      
+      <div class="lang-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px;">
+        <button class="lang-card-btn btn-ripple" onclick="selectInitialLanguageStep1('en')" style="padding: 20px; border-radius: var(--border-radius-md); border: 2px solid #e2e8f0; background: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+          <span style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">English</span>
+          <span style="font-size: 0.85rem; color: var(--text-secondary);">English</span>
+        </button>
+        <button class="lang-card-btn btn-ripple" onclick="selectInitialLanguageStep1('gu')" style="padding: 20px; border-radius: var(--border-radius-md); border: 2px solid #e2e8f0; background: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+          <span style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">ગુજરાતી</span>
+          <span style="font-size: 0.85rem; color: var(--text-secondary);">Gujarati</span>
+        </button>
+        <button class="lang-card-btn btn-ripple" onclick="selectInitialLanguageStep1('hi')" style="padding: 20px; border-radius: var(--border-radius-md); border: 2px solid #e2e8f0; background: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+          <span style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">हिन्दी</span>
+          <span style="font-size: 0.85rem; color: var(--text-secondary);">Hindi</span>
+        </button>
+      </div>
+    </div>
+
+
+  </div>
+
+  <!-- Floating Language Switcher Button -->
+  <button id="floating-lang-trigger" onclick="openWelcomeModal()">
+    <i class="fa-solid fa-language" style="font-size: 1.2rem;"></i>
+    <span id="floating-lang-text" data-translate="floating-lang">Language / ભાષા</span>
+  </button>
+
+</body>
+</html>
