@@ -1038,7 +1038,107 @@ function renderDoctorsList(filter = "all") {
     `;
     doctorsGrid.appendChild(docCard);
   });
+
+  // Reset slider position and slide direction to start
+  currentDocIndex = 0;
+  slideDirection = 1;
+  updateArrowIcon("right");
+  slideDoctors();
 }
+
+// ================= DOCTORS SLIDING CAROUSEL SYSTEM =================
+let currentDocIndex = 0;
+let slideDirection = 1; // 1 = right, -1 = left
+
+window.toggleDoctorsSlide = function() {
+  const maxIndex = getMaxDocIndex();
+  if (maxIndex === 0) return;
+
+  currentDocIndex += slideDirection;
+
+  if (currentDocIndex >= maxIndex) {
+    currentDocIndex = maxIndex;
+    slideDirection = -1; // Reverse slide direction
+    updateArrowIcon("left");
+  } else if (currentDocIndex <= 0) {
+    currentDocIndex = 0;
+    slideDirection = 1; // Slide forward
+    updateArrowIcon("right");
+  }
+
+  slideDoctors();
+};
+
+function slideDoctors() {
+  const grid = document.getElementById("doctors-grid");
+  if (!grid) return;
+  
+  const card = grid.querySelector(".doctor-card");
+  if (!card) {
+    grid.style.transform = "translateX(0px)";
+    const trigger = document.getElementById("doctors-slide-trigger");
+    if (trigger) trigger.style.display = "none";
+    return;
+  }
+
+  const cardWidth = card.clientWidth;
+  const gap = 30; // Matches gap: 30px in CSS
+  const transformX = -currentDocIndex * (cardWidth + gap);
+  grid.style.transform = `translateX(${transformX}px)`;
+
+  // Show/hide navigation button depending on whether there's space to slide
+  const trigger = document.getElementById("doctors-slide-trigger");
+  const maxIndex = getMaxDocIndex();
+  if (trigger) {
+    if (maxIndex === 0) {
+      trigger.style.display = "none";
+    } else {
+      trigger.style.display = "flex";
+    }
+  }
+}
+
+function getMaxDocIndex() {
+  const grid = document.getElementById("doctors-grid");
+  if (!grid) return 0;
+  const cards = grid.querySelectorAll(".doctor-card");
+  const visibleCards = getVisibleCardsCount();
+  return Math.max(0, cards.length - visibleCards);
+}
+
+function getVisibleCardsCount() {
+  const width = window.innerWidth;
+  if (width > 1200) return 4;
+  if (width > 768) return 3;
+  if (width > 480) return 2;
+  return 1;
+}
+
+function updateArrowIcon(dir) {
+  const icon = document.getElementById("doctors-slide-icon");
+  if (icon) {
+    if (dir === "left") {
+      icon.className = "fa-solid fa-chevron-left";
+    } else {
+      icon.className = "fa-solid fa-chevron-right";
+    }
+  }
+}
+
+// Adjust carousel slide position on window resizing
+window.addEventListener("resize", () => {
+  const maxIndex = getMaxDocIndex();
+  if (currentDocIndex > maxIndex) {
+    currentDocIndex = maxIndex;
+    slideDirection = -1;
+    updateArrowIcon("left");
+  }
+  if (currentDocIndex === 0) {
+    slideDirection = 1;
+    updateArrowIcon("right");
+  }
+  slideDoctors();
+});
 
 function renderDepartmentsList() {
   // Managed dynamically via standard layout

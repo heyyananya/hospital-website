@@ -990,9 +990,18 @@ a {
   box-shadow: 0 4px 12px rgba(0, 102, 255, 0.2);
 }
 
+.doctors-carousel-wrapper {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  padding: 10px 0;
+}
+
 .doctors-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  display: flex;
+  flex-direction: row;
+  transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  will-change: transform;
   gap: 30px;
 }
 
@@ -1003,6 +1012,30 @@ a {
   display: flex;
   flex-direction: column;
   height: 100%;
+  flex: 0 0 calc((100% - 90px) / 4);
+  max-width: calc((100% - 90px) / 4);
+  margin: 0;
+}
+
+@media (max-width: 1200px) {
+  .doctors-grid .doctor-card {
+    flex: 0 0 calc((100% - 60px) / 3);
+    max-width: calc((100% - 60px) / 3);
+  }
+}
+
+@media (max-width: 768px) {
+  .doctors-grid .doctor-card {
+    flex: 0 0 calc((100% - 30px) / 2);
+    max-width: calc((100% - 30px) / 2);
+  }
+}
+
+@media (max-width: 480px) {
+  .doctors-grid .doctor-card {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
 }
 
 .doc-image-box {
