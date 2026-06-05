@@ -323,10 +323,13 @@
         </div>
       </div>
 
-      <!-- Single Sliding Arrow Controller -->
-      <div class="carousel-nav" style="display: flex; justify-content: center; margin-top: 35px;" data-aos="fade-up">
-        <button id="doctors-slide-trigger" class="btn btn-secondary btn-circle" onclick="toggleDoctorsSlide()" style="width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1.5px solid var(--border-color); background: #fff; color: var(--primary); transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.04); outline: none;">
-          <i class="fa-solid fa-chevron-right" id="doctors-slide-icon" style="font-size: 1.1rem;"></i>
+      <!-- Doctors Carousel Controls -->
+      <div class="carousel-nav" data-aos="fade-up">
+        <button id="doctors-slide-prev" class="carousel-btn" onclick="slideDoctorsPrev()" aria-label="Previous slide">
+          <i class="fa-solid fa-chevron-left" style="font-size: 1.1rem;"></i>
+        </button>
+        <button id="doctors-slide-next" class="carousel-btn" onclick="slideDoctorsNext()" aria-label="Next slide">
+          <i class="fa-solid fa-chevron-right" style="font-size: 1.1rem;"></i>
         </button>
       </div>
     </div>

@@ -1039,34 +1039,27 @@ function renderDoctorsList(filter = "all") {
     doctorsGrid.appendChild(docCard);
   });
 
-  // Reset slider position and slide direction to start
+  // Reset slider position to start
   currentDocIndex = 0;
-  slideDirection = 1;
-  updateArrowIcon("right");
   slideDoctors();
 }
 
 // ================= DOCTORS SLIDING CAROUSEL SYSTEM =================
 let currentDocIndex = 0;
-let slideDirection = 1; // 1 = right, -1 = left
 
-window.toggleDoctorsSlide = function() {
-  const maxIndex = getMaxDocIndex();
-  if (maxIndex === 0) return;
-
-  currentDocIndex += slideDirection;
-
-  if (currentDocIndex >= maxIndex) {
-    currentDocIndex = maxIndex;
-    slideDirection = -1; // Reverse slide direction
-    updateArrowIcon("left");
-  } else if (currentDocIndex <= 0) {
-    currentDocIndex = 0;
-    slideDirection = 1; // Slide forward
-    updateArrowIcon("right");
+window.slideDoctorsPrev = function() {
+  if (currentDocIndex > 0) {
+    currentDocIndex--;
+    slideDoctors();
   }
+};
 
-  slideDoctors();
+window.slideDoctorsNext = function() {
+  const maxIndex = getMaxDocIndex();
+  if (currentDocIndex < maxIndex) {
+    currentDocIndex++;
+    slideDoctors();
+  }
 };
 
 function slideDoctors() {
@@ -1076,8 +1069,8 @@ function slideDoctors() {
   const card = grid.querySelector(".doctor-card");
   if (!card) {
     grid.style.transform = "translateX(0px)";
-    const trigger = document.getElementById("doctors-slide-trigger");
-    if (trigger) trigger.style.display = "none";
+    const nav = document.querySelector(".carousel-nav");
+    if (nav) nav.style.display = "none";
     return;
   }
 
@@ -1086,15 +1079,24 @@ function slideDoctors() {
   const transformX = -currentDocIndex * (cardWidth + gap);
   grid.style.transform = `translateX(${transformX}px)`;
 
-  // Show/hide navigation button depending on whether there's space to slide
-  const trigger = document.getElementById("doctors-slide-trigger");
+  const prevBtn = document.getElementById("doctors-slide-prev");
+  const nextBtn = document.getElementById("doctors-slide-next");
+  const nav = document.querySelector(".carousel-nav");
   const maxIndex = getMaxDocIndex();
-  if (trigger) {
+
+  if (nav) {
     if (maxIndex === 0) {
-      trigger.style.display = "none";
+      nav.style.display = "none";
     } else {
-      trigger.style.display = "flex";
+      nav.style.display = "flex";
     }
+  }
+
+  if (prevBtn) {
+    prevBtn.disabled = (currentDocIndex === 0);
+  }
+  if (nextBtn) {
+    nextBtn.disabled = (currentDocIndex >= maxIndex);
   }
 }
 
@@ -1114,28 +1116,11 @@ function getVisibleCardsCount() {
   return 1;
 }
 
-function updateArrowIcon(dir) {
-  const icon = document.getElementById("doctors-slide-icon");
-  if (icon) {
-    if (dir === "left") {
-      icon.className = "fa-solid fa-chevron-left";
-    } else {
-      icon.className = "fa-solid fa-chevron-right";
-    }
-  }
-}
-
 // Adjust carousel slide position on window resizing
 window.addEventListener("resize", () => {
   const maxIndex = getMaxDocIndex();
   if (currentDocIndex > maxIndex) {
     currentDocIndex = maxIndex;
-    slideDirection = -1;
-    updateArrowIcon("left");
-  }
-  if (currentDocIndex === 0) {
-    slideDirection = 1;
-    updateArrowIcon("right");
   }
   slideDoctors();
 });
