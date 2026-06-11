@@ -897,6 +897,19 @@ async function initDbSchema() {
       );
     `);
 
+    // Create doctor_reviews table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS doctor_reviews (
+        id SERIAL PRIMARY KEY,
+        appointment_id VARCHAR(100) UNIQUE NOT NULL,
+        doctor_id VARCHAR(50) NOT NULL,
+        patient_name VARCHAR(255) NOT NULL,
+        rating INT NOT NULL,
+        review TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     console.log('Database tables successfully verified and initialized.');
     schemaInitialized = true;
   } catch (err) {
@@ -917,6 +930,7 @@ app.get('/api/sync/get-state', async (req, res) => {
     const schedulesResult = await pool.query('SELECT * FROM schedules');
     const departmentsResult = await pool.query('SELECT * FROM departments');
     const notificationsResult = await pool.query('SELECT * FROM notifications');
+    const reviewsResult = await pool.query('SELECT * FROM doctor_reviews');
 
     res.json({
       success: true,
@@ -956,7 +970,16 @@ app.get('/api/sync/get-state', async (req, res) => {
         bookingId: slot.booking_id
       })),
       departments: departmentsResult.rows,
-      notifications: notificationsResult.rows
+      notifications: notificationsResult.rows,
+      reviews: reviewsResult.rows.map(rev => ({
+        id: rev.id,
+        appointmentId: rev.appointment_id,
+        doctorId: rev.doctor_id,
+        patientName: rev.patient_name,
+        rating: rev.rating,
+        review: rev.review,
+        createdAt: rev.created_at
+      }))
     });
   } catch (err) {
     console.error('Error fetching state from database:', err);
@@ -1248,6 +1271,31 @@ app.post('/api/sync/save-item', async (req, res) => {
           ]);
         }
       }
+      await pool.query('COMMIT');
+    } else if (key === 'phh_reviews') {
+      await pool.query('BEGIN');
+      await pool.query('DELETE FROM doctor_reviews');
+      for (const rev of data) {
+        await pool.query(`
+          INSERT INTO doctor_reviews (appointment_id, doctor_id, patient_name, rating, review)
+          VALUES ($1, $2, $3, $4, $5)
+        `, [
+          rev.appointmentId || rev.appointment_id || null,
+          rev.doctorId || rev.doctor_id || null,
+          rev.patientName || rev.patient_name || null,
+          rev.rating !== undefined && rev.rating !== null ? Number(rev.rating) : null,
+          rev.review || null
+        ]);
+      }
+
+      // Update the rating of doctors based on reviews average
+      await pool.query(`
+        UPDATE doctors d
+        SET rating = COALESCE(
+          (SELECT ROUND(AVG(rating), 1) FROM doctor_reviews r WHERE r.doctor_id = d.id),
+          4.8
+        )
+      `);
       await pool.query('COMMIT');
     }
 
@@ -1920,6 +1968,7 @@ app.post('/api/sync/reset', async (req, res) => {
     await pool.query('DELETE FROM appointments');
     await pool.query('DELETE FROM schedules');
     await pool.query('DELETE FROM notifications');
+    await pool.query('DELETE FROM doctor_reviews');
     await pool.query('COMMIT');
     res.json({ success: true, message: 'Database state reset successfully.' });
   } catch (err) {

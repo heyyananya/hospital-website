@@ -198,6 +198,47 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
+      // Render Feedback Prompt Box
+      const feedbackPromptBox = document.getElementById("patient-feedback-prompt-box");
+      if (feedbackPromptBox) {
+        const reviews = JSON.parse(localStorage.getItem("phh_reviews")) || [];
+        const unreviewedCompletedAppts = myAppointments.filter(app => 
+          app && app.status === "Completed" && !reviews.some(r => r.appointmentId === app.id || r.appointment_id === app.id)
+        );
+
+        if (unreviewedCompletedAppts.length > 0) {
+          feedbackPromptBox.style.display = "block";
+          feedbackPromptBox.innerHTML = unreviewedCompletedAppts.map(a => `
+            <div class="glass-card" style="border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.04); padding: 20px; border-radius: var(--border-radius); display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 12px; text-align: left;">
+              <div style="display: flex; align-items: flex-start; gap: 12px; flex: 1;">
+                <div style="color: #ffb800; font-size: 1.8rem;"><i class="fa-solid fa-star"></i></div>
+                <div>
+                  <strong style="color: var(--dark); display: block; margin-bottom: 4px; font-size: 1.05rem;">How was your consultation with Dr. ${a.doctorName}?</strong>
+                  <span style="font-size: 0.85rem; color: var(--text-secondary); display: block; line-height: 1.4;">
+                    Your appointment on <strong>${a.date}</strong> at <strong>${a.slot}</strong> is marked as completed. Please take a moment to rate their care.
+                  </span>
+                </div>
+              </div>
+              <button class="btn btn-primary rate-btn-trigger" data-id="${a.id}" data-doc-id="${a.doctorId}" data-doc-name="${a.doctorName}" style="padding: 10px 20px; font-size: 0.85rem; border-radius: 8px; cursor: pointer; flex-shrink: 0; background: #ffb800; border-color: #ffb800; color: #1e293b; font-weight: 700;">
+                Rate Consultation
+              </button>
+            </div>
+          `).join("");
+
+          // Bind review triggers
+          feedbackPromptBox.querySelectorAll(".rate-btn-trigger").forEach(btn => {
+            btn.addEventListener("click", () => {
+              const apptId = btn.getAttribute("data-id");
+              const docId = btn.getAttribute("data-doc-id");
+              const docName = btn.getAttribute("data-doc-name");
+              openFeedbackModal(apptId, docId, docName);
+            });
+          });
+        } else {
+          feedbackPromptBox.style.display = "none";
+        }
+      }
+
       // Render active consultations card grid (if existing)
       const cardsSection = document.getElementById("patient-active-cards-section");
       if (cardsSection) {
@@ -713,7 +754,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   window.addEventListener("storage", (e) => {
-    if (e.key === "phh_appointments") {
+    if (e.key === "phh_appointments" || e.key === "phh_reviews") {
       performPatientSync();
     }
   });
@@ -725,7 +766,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Robust Periodic Sync Polling Fallback (for file:// protocol compatibility)
   let lastAppointmentsStr = localStorage.getItem("phh_appointments");
-  
+  let lastReviewsStr = localStorage.getItem("phh_reviews");
 
   setInterval(() => {
     let changed = false;
@@ -736,12 +777,135 @@ document.addEventListener("DOMContentLoaded", () => {
       changed = true;
     }
 
-
+    const currentReviewsStr = localStorage.getItem("phh_reviews");
+    if (currentReviewsStr !== lastReviewsStr) {
+      lastReviewsStr = currentReviewsStr;
+      changed = true;
+    }
 
     if (changed) {
       performPatientSync();
     }
   }, 1000);
+
+  // Feedback Modal Interaction Handlers
+  function openFeedbackModal(apptId, docId, docName) {
+    const modal = document.getElementById("feedback-modal");
+    if (!modal) return;
+    
+    document.getElementById("feedback-appt-id").value = apptId;
+    document.getElementById("feedback-doctor-id").value = docId;
+    document.getElementById("feedback-doctor-name-input").value = docName;
+    document.getElementById("feedback-doctor-name").textContent = docName;
+    document.getElementById("feedback-review-text").value = "";
+    document.getElementById("feedback-rating").value = "5";
+    
+    // Reset stars to default 5 stars
+    const starBtns = modal.querySelectorAll(".star-btn");
+    starBtns.forEach(star => {
+      star.style.color = "#ffb800";
+    });
+
+    modal.style.display = "flex";
+    setTimeout(() => modal.classList.add("active"), 10);
+    document.body.classList.add("modal-open");
+  }
+
+  function closeFeedbackModal() {
+    const modal = document.getElementById("feedback-modal");
+    if (modal) {
+      modal.classList.remove("active");
+      document.body.classList.remove("modal-open");
+      setTimeout(() => {
+        if (!modal.classList.contains("active")) {
+          modal.style.display = "none";
+        }
+      }, 400);
+    }
+  }
+
+  // Bind close triggers
+  const feedbackCloseBtn = document.getElementById("feedback-close-btn");
+  if (feedbackCloseBtn) {
+    feedbackCloseBtn.addEventListener("click", closeFeedbackModal);
+  }
+  const feedbackModalEl = document.getElementById("feedback-modal");
+  if (feedbackModalEl) {
+    feedbackModalEl.addEventListener("click", (e) => {
+      if (e.target === feedbackModalEl) {
+        closeFeedbackModal();
+      }
+    });
+  }
+
+  // Bind interactive stars selection
+  const starBtns = document.querySelectorAll(".star-btn");
+  starBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const val = parseInt(btn.getAttribute("data-value"), 10);
+      document.getElementById("feedback-rating").value = val;
+      starBtns.forEach(star => {
+        const starVal = parseInt(star.getAttribute("data-value"), 10);
+        if (starVal <= val) {
+          star.style.color = "#ffb800";
+        } else {
+          star.style.color = "#cbd5e1";
+        }
+      });
+    });
+  });
+
+  // Submit feedback form
+  const feedbackForm = document.getElementById("feedback-form");
+  if (feedbackForm) {
+    feedbackForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      
+      const apptId = document.getElementById("feedback-appt-id").value;
+      const docId = document.getElementById("feedback-doctor-id").value;
+      const docName = document.getElementById("feedback-doctor-name-input").value;
+      const rating = parseInt(document.getElementById("feedback-rating").value, 10);
+      const reviewText = document.getElementById("feedback-review-text").value.trim();
+      
+      if (!apptId || !docId || isNaN(rating) || !reviewText) {
+        alert("Please provide a rating and write a review.");
+        return;
+      }
+      
+      const newReview = {
+        appointmentId: apptId,
+        doctorId: docId,
+        patientName: currentUser.name || "Patient",
+        rating: rating,
+        review: reviewText,
+        createdAt: new Date().toISOString()
+      };
+      
+      let currentReviews = JSON.parse(localStorage.getItem("phh_reviews")) || [];
+      // Remove previous duplicate for this appointment if any
+      currentReviews = currentReviews.filter(r => r.appointmentId !== apptId && r.appointment_id !== apptId);
+      currentReviews.push(newReview);
+      
+      // Save reviews to localStorage (triggers syncAdaptor automatically!)
+      localStorage.setItem("phh_reviews", JSON.stringify(currentReviews));
+      
+      closeFeedbackModal();
+      
+      // Update local storage and UI local sync
+      setTimeout(() => {
+        if (window.syncDatabaseToLocal) {
+          window.syncDatabaseToLocal().then(() => {
+            performPatientSync();
+          });
+        } else {
+          performPatientSync();
+        }
+      }, 300);
+
+      if (window.showSuccessToast) window.showSuccessToast("Thank you for your feedback!");
+      else alert("Thank you for your feedback!");
+    });
+  }
 
   // Sidebar mobile toggle drawer trigger
   const sideNav = document.getElementById("dashboard-sidebar");

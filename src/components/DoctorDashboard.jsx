@@ -752,6 +752,41 @@ export default function DoctorDashboard() {
     }
   };
 
+  // Mark Completed Logic
+  const handleMarkCompleted = async (appt) => {
+    const confirmed = await window.customConfirm(`Mark appointment for ${appt.patientName} as Completed?`);
+    if (!confirmed) return;
+
+    try {
+      const updatedAppointments = appointments.map(a => {
+        if (a && a.id === appt.id) {
+          return { ...a, status: "Completed" };
+        }
+        return a;
+      });
+
+      const apiBase = getApiBase();
+      const resAppts = await fetch(`${apiBase}/api/sync/save-item`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'phh_appointments', data: updatedAppointments })
+      });
+      const apptsData = await resAppts.json();
+
+      if (!resAppts.ok || !apptsData.success) {
+        throw new Error(apptsData.error || "Failed to mark appointment as completed.");
+      }
+
+      saveAppointments(updatedAppointments);
+      if (window.showSuccessToast) window.showSuccessToast("Appointment marked as completed.");
+      else alert("Appointment marked as completed.");
+    } catch (err) {
+      console.error(err);
+      if (window.showErrorToast) window.showErrorToast(err.message || "Failed to mark appointment as completed.");
+      else alert(err.message || "Failed to mark appointment as completed.");
+    }
+  };
+
   // Bulk Reschedule Logic
   const handleOpenBulkRescheduleModal = (dateStr) => {
     const pendingAppsOnDate = appointments.filter(a => 
@@ -1208,6 +1243,14 @@ export default function DoctorDashboard() {
                                 
                                 {app.status !== "Cancelled" && app.status !== "Completed" && (
                                   <>
+                                    <button
+                                      onClick={() => handleMarkCompleted(app)}
+                                      className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 text-slate-600 flex items-center justify-center border border-slate-200 transition-all duration-150"
+                                      title="Mark Completed"
+                                    >
+                                      <i className="fa-solid fa-check text-xs"></i>
+                                    </button>
+
                                     <button
                                       onClick={() => handleOpenRescheduleModal(app)}
                                       className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 text-slate-600 flex items-center justify-center border border-slate-200 transition-all duration-150"

@@ -21,7 +21,7 @@
   }
   window.API_BASE = API_BASE;
 
-  const syncKeys = ['phh_doctors', 'phh_doctor_requests', 'phh_appointments', 'phh_slots', 'phh_notifications', 'phh_departments'];
+  const syncKeys = ['phh_doctors', 'phh_doctor_requests', 'phh_appointments', 'phh_slots', 'phh_notifications', 'phh_departments', 'phh_reviews'];
   let lastWriteTime = 0;
 
   // 1. Intercept Storage.prototype.setItem to automatically write changes to PostgreSQL
@@ -88,7 +88,8 @@
           'phh_appointments': data.appointments,
           'phh_slots': data.slots,
           'phh_notifications': data.notifications,
-          'phh_departments': data.departments
+          'phh_departments': data.departments,
+          'phh_reviews': data.reviews || []
         };
 
         for (const [key, value] of Object.entries(keysToUpdate)) {

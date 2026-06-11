@@ -8,6 +8,7 @@ if (urlParams.has("reset-db") || urlParams.has("reset")) {
   localStorage.removeItem("phh_appointments");
   localStorage.removeItem("phh_slots");
   localStorage.removeItem("phh_current_user");
+  localStorage.removeItem("phh_reviews");
 
   // Call backend reset API to clear PostgreSQL tables
   const apiBase = window.API_BASE || '';
