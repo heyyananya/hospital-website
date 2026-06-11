@@ -1755,8 +1755,8 @@ export default function DoctorDashboard() {
                 <div className="flex items-baseline gap-2 mt-2">
                   <span className="text-4xl font-extrabold text-slate-900">
                     {(() => {
-                      const docReviews = reviews.filter(r => r && (r.doctorId === activeDocId || r.doctor_id === activeDocId));
-                      if (docReviews.length === 0) return "4.8";
+                      const docReviews = reviews.filter(r => r && (String(r.doctorId || r.doctor_id) === String(activeDocId)));
+                      if (docReviews.length === 0) return "N/A";
                       const sum = docReviews.reduce((acc, r) => acc + Number(r.rating || 5), 0);
                       return (Math.round((sum / docReviews.length) * 10) / 10).toFixed(1);
                     })()}
@@ -1765,16 +1765,25 @@ export default function DoctorDashboard() {
                 </div>
                 <div className="flex gap-1 text-amber-400 mt-2 text-lg">
                   {(() => {
-                    const docReviews = reviews.filter(r => r && (r.doctorId === activeDocId || r.doctor_id === activeDocId));
-                    const avg = docReviews.length === 0 ? 4.8 : docReviews.reduce((acc, r) => acc + Number(r.rating || 5), 0) / docReviews.length;
+                    const docReviews = reviews.filter(r => r && (String(r.doctorId || r.doctor_id) === String(activeDocId)));
+                    if (docReviews.length === 0) {
+                      return Array(5).fill(0).map((_, i) => <i key={i} className="fa-regular fa-star text-slate-200"></i>);
+                    }
+                    const avg = docReviews.reduce((acc, r) => acc + Number(r.rating || 5), 0) / docReviews.length;
                     const fullStars = Math.floor(avg);
-                    const hasHalf = avg % 1 >= 0.25 && avg % 1 <= 0.75;
+                    const frac = avg % 1;
                     const stars = [];
                     for (let i = 0; i < 5; i++) {
                       if (i < fullStars) {
                         stars.push(<i key={i} className="fa-solid fa-star"></i>);
-                      } else if (i === fullStars && hasHalf) {
-                        stars.push(<i key={i} className="fa-solid fa-star-half-stroke"></i>);
+                      } else if (i === fullStars) {
+                        if (frac >= 0.75) {
+                          stars.push(<i key={i} className="fa-solid fa-star"></i>);
+                        } else if (frac >= 0.25) {
+                          stars.push(<i key={i} className="fa-solid fa-star-half-stroke"></i>);
+                        } else {
+                          stars.push(<i key={i} className="fa-regular fa-star text-slate-200"></i>);
+                        }
                       } else {
                         stars.push(<i key={i} className="fa-regular fa-star text-slate-200"></i>);
                       }
@@ -1783,7 +1792,7 @@ export default function DoctorDashboard() {
                   })()}
                 </div>
                 <span className="text-xs text-slate-500 font-medium mt-3 block">
-                  Based on {reviews.filter(r => r && (r.doctorId === activeDocId || r.doctor_id === activeDocId)).length} patient reviews
+                  Based on {reviews.filter(r => r && (String(r.doctorId || r.doctor_id) === String(activeDocId))).length} patient reviews
                 </span>
               </div>
 
@@ -1801,7 +1810,7 @@ export default function DoctorDashboard() {
                 {/* Visual Rating Distribution Bar */}
                 <div className="space-y-2.5 pt-4 border-t border-slate-100">
                   {[5, 4, 3, 2, 1].map(starNum => {
-                    const docReviews = reviews.filter(r => r && (r.doctorId === activeDocId || r.doctor_id === activeDocId));
+                    const docReviews = reviews.filter(r => r && (String(r.doctorId || r.doctor_id) === String(activeDocId)));
                     const starCount = docReviews.filter(r => Math.round(Number(r.rating || 5)) === starNum).length;
                     const pct = docReviews.length > 0 ? (starCount / docReviews.length) * 100 : 0;
                     return (
@@ -1827,7 +1836,7 @@ export default function DoctorDashboard() {
 
               <div className="space-y-4">
                 {(() => {
-                  const docReviews = reviews.filter(r => r && (r.doctorId === activeDocId || r.doctor_id === activeDocId)).sort((a, b) => new Date(b.createdAt || Date.now()) - new Date(a.createdAt || Date.now()));
+                  const docReviews = reviews.filter(r => r && (String(r.doctorId || r.doctor_id) === String(activeDocId))).sort((a, b) => new Date(b.createdAt || Date.now()) - new Date(a.createdAt || Date.now()));
                   if (docReviews.length === 0) {
                     return (
                       <div className="py-16 text-center">

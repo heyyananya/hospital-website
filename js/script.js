@@ -982,15 +982,53 @@ function renderDoctorsList(filter = "all") {
 
     const transStatus = TRANSLATIONS[currentLanguage][transKey] || doc.status;
 
-    // Fetch reviews for this doctor
+    // Fetch reviews for this doctor safely using type-agnostic string matching
     const allReviews = JSON.parse(localStorage.getItem("phh_reviews")) || [];
-    const docReviews = allReviews.filter(r => r && r.doctorId === doc.id);
+    const docReviews = allReviews.filter(r => r && (String(r.doctorId) === String(doc.id) || String(r.doctor_id) === String(doc.id)));
     
-    // Recalculate average rating dynamically
-    let activeRating = Number(doc.rating) || 4.8;
+    // Recalculate average rating dynamically from reviews
+    let activeRating = null;
     if (docReviews.length > 0) {
       const sum = docReviews.reduce((acc, r) => acc + Number(r.rating || 5), 0);
       activeRating = Math.round((sum / docReviews.length) * 10) / 10;
+    } else if (doc.rating !== null && doc.rating !== undefined && !isNaN(Number(doc.rating))) {
+      activeRating = Number(doc.rating);
+    }
+
+    // Build stars HTML or fallback to "No reviews"
+    let ratingHtml = "";
+    if (activeRating !== null && activeRating !== undefined) {
+      let starsHtml = "";
+      const fullStars = Math.floor(activeRating);
+      const frac = activeRating % 1;
+      for (let i = 0; i < 5; i++) {
+        if (i < fullStars) {
+          starsHtml += '<i class="fa-solid fa-star"></i>';
+        } else if (i === fullStars) {
+          if (frac >= 0.75) {
+            starsHtml += '<i class="fa-solid fa-star"></i>';
+          } else if (frac >= 0.25) {
+            starsHtml += '<i class="fa-solid fa-star-half-stroke"></i>';
+          } else {
+            starsHtml += '<i class="fa-regular fa-star" style="color: #cbd5e1;"></i>';
+          }
+        } else {
+          starsHtml += '<i class="fa-regular fa-star" style="color: #cbd5e1;"></i>';
+        }
+      }
+      ratingHtml = `
+        ${starsHtml}
+        <span>(${activeRating.toFixed(1)})</span>
+      `;
+    } else {
+      ratingHtml = `
+        <i class="fa-regular fa-star" style="color: #cbd5e1;"></i>
+        <i class="fa-regular fa-star" style="color: #cbd5e1;"></i>
+        <i class="fa-regular fa-star" style="color: #cbd5e1;"></i>
+        <i class="fa-regular fa-star" style="color: #cbd5e1;"></i>
+        <i class="fa-regular fa-star" style="color: #cbd5e1;"></i>
+        <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; margin-left: 4px;">(No reviews)</span>
+      `;
     }
 
     // Create doctor card element
@@ -1023,9 +1061,7 @@ function renderDoctorsList(filter = "all") {
         <span class="doc-dept">${getTranslation(doc.specialty)}</span>
         <h3 class="doc-name">${doc.name}</h3>
         <div class="doc-rating">
-          ${Array(Math.floor(activeRating)).fill('<i class="fa-solid fa-star"></i>').join('')}
-          ${activeRating % 1 !== 0 ? '<i class="fa-solid fa-star-half-stroke"></i>' : ''}
-          <span>(${activeRating})</span>
+          ${ratingHtml}
         </div>
         <div class="doc-meta">
           <div class="doc-meta-item">

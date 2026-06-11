@@ -697,7 +697,7 @@ const handleDoctorRegistration = async (req, res) => {
         time ? time.trim() : '9 AM - 5 PM',
         numericFee,
         'Pending', // Set status to Pending
-        4.8,       // Default initial rating
+        null,      // Default initial rating (starts with no rating)
         username.trim(),
         hashedPassword, // Hashed password
         email.trim()
@@ -1288,13 +1288,10 @@ app.post('/api/sync/save-item', async (req, res) => {
         ]);
       }
 
-      // Update the rating of doctors based on reviews average
+      // Update the rating of doctors based on reviews average (null if no reviews yet)
       await pool.query(`
         UPDATE doctors d
-        SET rating = COALESCE(
-          (SELECT ROUND(AVG(rating), 1) FROM doctor_reviews r WHERE r.doctor_id = d.id),
-          4.8
-        )
+        SET rating = (SELECT ROUND(AVG(rating), 1) FROM doctor_reviews r WHERE r.doctor_id = d.id)
       `);
       await pool.query('COMMIT');
     }

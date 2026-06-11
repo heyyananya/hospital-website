@@ -277,7 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const newDoc = {
         id: "doc-" + Math.floor(1000 + Math.random() * 9000),
-        name, specialty: dept, exp, days, time, fee, status, rating: 4.8,
+        name, specialty: dept, exp, days, time, fee, status, rating: null,
         username: generatedId,
         password: generatedPassword,
         email: `${generatedId}@hub.com`
@@ -678,7 +678,7 @@ document.addEventListener("DOMContentLoaded", () => {
         time: time,
         fee: fee,
         status: 'Available', // Active immediately
-        rating: 4.8,
+        rating: null,
         username: generatedId,
         password: generatedPassword,
         email: `${generatedId}@hub.com`

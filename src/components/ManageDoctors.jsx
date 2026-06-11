@@ -148,7 +148,7 @@ function ManageDoctors() {
         time: formData.time.trim(),
         fee: parseInt(formData.fee) || 0,
         status: formData.status,
-        rating: 4.8,
+        rating: null,
         username: generatedId,
         password: generatedPassword,
         email: `${generatedId}@hub.com`
@@ -328,7 +328,7 @@ function ManageDoctors() {
         time: time,
         fee: fee,
         status: 'Available',
-        rating: 4.8,
+        rating: null,
         username: generatedId,
         password: generatedPassword,
         email: `${generatedId}@hub.com`
