@@ -33,6 +33,7 @@ export default function DoctorDashboard() {
   const [doctors, setDoctors] = useState(() => JSON.parse(localStorage.getItem("phh_doctors")) || []);
   const [appointments, setAppointments] = useState(() => JSON.parse(localStorage.getItem("phh_appointments")) || []);
   const [slots, setSlots] = useState(() => JSON.parse(localStorage.getItem("phh_slots")) || []);
+  const [reviews, setReviews] = useState(() => JSON.parse(localStorage.getItem("phh_reviews")) || []);
 
   const [activeTab, setActiveTab] = useState("doc-patients");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -235,9 +236,11 @@ export default function DoctorDashboard() {
       const docs = JSON.parse(localStorage.getItem("phh_doctors")) || [];
       const appts = JSON.parse(localStorage.getItem("phh_appointments")) || [];
       const slts = JSON.parse(localStorage.getItem("phh_slots")) || [];
+      const revs = JSON.parse(localStorage.getItem("phh_reviews")) || [];
       setDoctors(docs);
       setAppointments(appts);
       setSlots(slts);
+      setReviews(revs);
     };
 
     window.addEventListener("storage", handleSync);
@@ -1023,6 +1026,14 @@ export default function DoctorDashboard() {
               <i className="fa-solid fa-calendar-day text-base"></i>
               <span>Search by Date</span>
             </button>
+
+            <button
+              onClick={() => { setActiveTab("doc-reviews"); setIsSidebarOpen(false); }}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 w-full text-left ${activeTab === 'doc-reviews' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+            >
+              <i className="fa-solid fa-star text-base"></i>
+              <span>Patient Reviews</span>
+            </button>
           </nav>
         </div>
 
@@ -1728,6 +1739,136 @@ export default function DoctorDashboard() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Tab: Reviews */}
+        {activeTab === "doc-reviews" && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Header / Stats Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
+              <div className="md:col-span-4 bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col justify-center items-center text-center">
+                <div className="w-16 h-16 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-3xl mb-4 border border-blue-100 shadow-inner">
+                  <i className="fa-solid fa-ranking-star"></i>
+                </div>
+                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Average Rating</h4>
+                <div className="flex items-baseline gap-2 mt-2">
+                  <span className="text-4xl font-extrabold text-slate-900">
+                    {(() => {
+                      const docReviews = reviews.filter(r => r && (r.doctorId === activeDocId || r.doctor_id === activeDocId));
+                      if (docReviews.length === 0) return "4.8";
+                      const sum = docReviews.reduce((acc, r) => acc + Number(r.rating || 5), 0);
+                      return (Math.round((sum / docReviews.length) * 10) / 10).toFixed(1);
+                    })()}
+                  </span>
+                  <span className="text-base font-bold text-slate-400">/ 5.0</span>
+                </div>
+                <div className="flex gap-1 text-amber-400 mt-2 text-lg">
+                  {(() => {
+                    const docReviews = reviews.filter(r => r && (r.doctorId === activeDocId || r.doctor_id === activeDocId));
+                    const avg = docReviews.length === 0 ? 4.8 : docReviews.reduce((acc, r) => acc + Number(r.rating || 5), 0) / docReviews.length;
+                    const fullStars = Math.floor(avg);
+                    const hasHalf = avg % 1 >= 0.25 && avg % 1 <= 0.75;
+                    const stars = [];
+                    for (let i = 0; i < 5; i++) {
+                      if (i < fullStars) {
+                        stars.push(<i key={i} className="fa-solid fa-star"></i>);
+                      } else if (i === fullStars && hasHalf) {
+                        stars.push(<i key={i} className="fa-solid fa-star-half-stroke"></i>);
+                      } else {
+                        stars.push(<i key={i} className="fa-regular fa-star text-slate-200"></i>);
+                      }
+                    }
+                    return stars;
+                  })()}
+                </div>
+                <span className="text-xs text-slate-500 font-medium mt-3 block">
+                  Based on {reviews.filter(r => r && (r.doctorId === activeDocId || r.doctor_id === activeDocId)).length} patient reviews
+                </span>
+              </div>
+
+              <div className="md:col-span-8 bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+                <div className="space-y-2">
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i className="fa-solid fa-star text-blue-600"></i>
+                    <span>Reviews & Feedback Insights</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Patient comments and star ratings submit directly from the Patient Portal once their appointments are completed. Reviews display in the landing page's specialists index based on these dynamic metrics.
+                  </p>
+                </div>
+                
+                {/* Visual Rating Distribution Bar */}
+                <div className="space-y-2.5 pt-4 border-t border-slate-100">
+                  {[5, 4, 3, 2, 1].map(starNum => {
+                    const docReviews = reviews.filter(r => r && (r.doctorId === activeDocId || r.doctor_id === activeDocId));
+                    const starCount = docReviews.filter(r => Math.round(Number(r.rating || 5)) === starNum).length;
+                    const pct = docReviews.length > 0 ? (starCount / docReviews.length) * 100 : 0;
+                    return (
+                      <div key={starNum} className="flex items-center gap-3 text-xs font-medium text-slate-600">
+                        <span className="w-8 text-right flex items-center justify-end gap-1">{starNum} <i className="fa-solid fa-star text-[10px] text-amber-400"></i></span>
+                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-blue-600 rounded-full transition-all duration-300" style={{ width: `${pct}%` }}></div>
+                        </div>
+                        <span className="w-8 text-slate-400 text-right">{starCount}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Reviews list panel */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6">
+              <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fa-solid fa-comments text-blue-600"></i>
+                <span>Patient Review Log</span>
+              </h3>
+
+              <div className="space-y-4">
+                {(() => {
+                  const docReviews = reviews.filter(r => r && (r.doctorId === activeDocId || r.doctor_id === activeDocId)).sort((a, b) => new Date(b.createdAt || Date.now()) - new Date(a.createdAt || Date.now()));
+                  if (docReviews.length === 0) {
+                    return (
+                      <div className="py-16 text-center">
+                        <div className="w-12 h-12 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center text-xl mx-auto mb-3 border border-slate-200/60">
+                          <i className="fa-solid fa-comment-slash"></i>
+                        </div>
+                        <h4 className="text-sm font-bold text-slate-900">No Patient Reviews Submitted Yet</h4>
+                        <p className="text-xs text-slate-500 mt-1 max-w-[280px] mx-auto leading-relaxed">
+                          Patient ratings and testimonials will display here in real-time as they complete their visits.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return docReviews.map(r => {
+                    return (
+                      <div key={r.id || r.appointmentId} className="p-4 rounded-xl border border-slate-100 bg-slate-50/30 flex flex-col gap-2 hover:bg-slate-50 transition-colors duration-150 text-left">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <strong className="text-sm text-slate-900">{r.patientName || r.patient_name || 'Anonymous Patient'}</strong>
+                            <span className="text-[10px] text-slate-400 block font-medium mt-0.5">
+                              Submitted: {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex gap-0.5 text-amber-400 text-xs">
+                            {Array(parseInt(r.rating || 5, 10)).fill(0).map((_, i) => <i key={i} className="fa-solid fa-star"></i>)}
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-600 italic font-medium leading-relaxed mt-1">
+                          "{r.review}"
+                        </p>
+                        <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                          <i className="fa-solid fa-circle-check text-emerald-500"></i>
+                          <span>Verified Consultation (ID: <code>{r.appointmentId || 'N/A'}</code>)</span>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
           </div>
         )}
       </main>

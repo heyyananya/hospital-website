@@ -993,31 +993,6 @@ function renderDoctorsList(filter = "all") {
       activeRating = Math.round((sum / docReviews.length) * 10) / 10;
     }
 
-    let reviewsHtml = '';
-    if (docReviews.length > 0) {
-      const lastReviews = docReviews.slice(-2).reverse(); // get last 2 reviews
-      reviewsHtml = `
-        <div class="doc-reviews-preview" style="margin-top: 12px; border-top: 1px dashed rgba(0, 102, 255, 0.1); padding-top: 10px; text-align: left;">
-          <span style="font-size: 0.75rem; font-weight: 700; color: var(--dark); display: block; margin-bottom: 6px;">
-            <i class="fa-solid fa-comments text-primary" style="margin-right: 4px;"></i> Patient Reviews (${docReviews.length})
-          </span>
-          <div class="custom-scrollbar" style="display: flex; flex-direction: column; gap: 6px; max-height: 110px; overflow-y: auto; padding-right: 4px;">
-            ${lastReviews.map(r => `
-              <div style="font-size: 0.72rem; background: rgba(0, 102, 255, 0.02); border: 1px solid rgba(0, 102, 255, 0.05); padding: 6px 8px; border-radius: 6px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-                  <strong style="color: var(--dark);">${r.patientName || r.patient_name || 'Patient'}</strong>
-                  <span style="color: #ffb800; font-size: 0.65rem;">
-                    ${Array(r.rating || 5).fill('<i class="fa-solid fa-star"></i>').join('')}
-                  </span>
-                </div>
-                <p style="color: var(--text-secondary); margin: 0; font-style: italic; line-height: 1.3;">"${r.review}"</p>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
-
     // Create doctor card element
     const docCard = document.createElement("div");
     docCard.className = "glass-card doctor-card";
@@ -1052,7 +1027,6 @@ function renderDoctorsList(filter = "all") {
           ${activeRating % 1 !== 0 ? '<i class="fa-solid fa-star-half-stroke"></i>' : ''}
           <span>(${activeRating})</span>
         </div>
-        ${reviewsHtml}
         <div class="doc-meta">
           <div class="doc-meta-item">
             <span class="doc-meta-label"><i class="fa-solid fa-graduation-cap"></i> ${TRANSLATIONS[currentLanguage]["doc-exp-label"] || "Experience"}</span>
