@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const MAX_DAILY_BOOKINGS = 10;
 
@@ -252,14 +252,23 @@ export default function DoctorDashboard() {
     };
   }, []);
 
+  const lastSyncedTimeRef = useRef("");
+  const lastSyncedStatusRef = useRef("");
+
   // Initialize form controls once doctor details are loaded
   useEffect(() => {
     const doc = doctors.find(d => d && d.id === activeDocId);
     if (doc) {
-      setLiveStatus(doc.status || "Available");
-      const timings = parseTimeRangeTo24h(doc.time);
-      setProfileStart(timings.start);
-      setProfileEnd(timings.end);
+      if (doc.status !== lastSyncedStatusRef.current) {
+        setLiveStatus(doc.status || "Available");
+        lastSyncedStatusRef.current = doc.status || "Available";
+      }
+      if (doc.time !== lastSyncedTimeRef.current) {
+        const timings = parseTimeRangeTo24h(doc.time);
+        setProfileStart(timings.start);
+        setProfileEnd(timings.end);
+        lastSyncedTimeRef.current = doc.time || "";
+      }
     }
   }, [doctors, activeDocId]);
 
