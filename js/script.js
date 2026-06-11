@@ -769,7 +769,7 @@ const qPercentLabel = document.getElementById("q-percent-label");
 const qProgressBar = document.getElementById("q-progress-bar");
 
 // Testimonials
-const testimonialSlides = document.querySelectorAll(".testimonial-slide");
+let testimonialSlides = document.querySelectorAll(".testimonial-slide");
 const testPrevBtn = document.getElementById("test-prev");
 const testNextBtn = document.getElementById("test-next");
 let activeTestimonialIndex = 0;
@@ -915,6 +915,7 @@ function setLanguage(lang) {
   // Update dynamic elements
   renderDoctorsList();
   renderDepartmentsList();
+  renderTestimonials();
 }
 
 
@@ -1942,25 +1943,143 @@ if (contactForm) {
 
 // ================= TESTIMONIAL CAROUSEL =================
 function showTestimonial(index) {
+  if (testimonialSlides.length === 0) return;
   testimonialSlides.forEach(slide => slide.classList.remove("active"));
-  testimonialSlides[index].classList.add("active");
+  if (testimonialSlides[index]) {
+    testimonialSlides[index].classList.add("active");
+  }
 }
 
 testNextBtn.addEventListener("click", () => {
+  if (testimonialSlides.length === 0) return;
   activeTestimonialIndex = (activeTestimonialIndex + 1) % testimonialSlides.length;
   showTestimonial(activeTestimonialIndex);
 });
 
 testPrevBtn.addEventListener("click", () => {
+  if (testimonialSlides.length === 0) return;
   activeTestimonialIndex = (activeTestimonialIndex - 1 + testimonialSlides.length) % testimonialSlides.length;
   showTestimonial(activeTestimonialIndex);
 });
 
 // Auto rotation
 setInterval(() => {
+  if (testimonialSlides.length === 0) return;
   activeTestimonialIndex = (activeTestimonialIndex + 1) % testimonialSlides.length;
   showTestimonial(activeTestimonialIndex);
 }, 10000);
+
+function renderTestimonials() {
+  const track = document.querySelector(".testimonial-track");
+  if (!track) return;
+
+  const reviews = JSON.parse(localStorage.getItem("phh_reviews")) || [];
+  
+  if (reviews.length > 0) {
+    track.innerHTML = reviews.map((rev, idx) => {
+      const doc = doctors.find(d => d.id === rev.doctorId || d.id === rev.doctor_id);
+      const docLabel = doc ? `Consultation with Dr. ${doc.name}` : "General Consultation";
+      
+      let starsHtml = "";
+      const ratingVal = parseInt(rev.rating, 10) || 5;
+      for (let i = 0; i < 5; i++) {
+        if (i < ratingVal) {
+          starsHtml += `<i class="fa-solid fa-star"></i>`;
+        } else {
+          starsHtml += `<i class="fa-regular fa-star" style="color: #cbd5e1;"></i>`;
+        }
+      }
+
+      const activeClass = idx === 0 ? "active" : "";
+
+      return `
+        <div class="glass-card testimonial-slide ${activeClass}">
+          <div class="testimonial-body">
+            <i class="fa-solid fa-quote-left quote-icon"></i>
+            <p class="test-text">"${rev.review}"</p>
+            <div class="test-patient">
+              <span class="test-name">${rev.patientName || rev.patient_name || 'Patient'}</span>
+              <span class="test-city">${docLabel}</span>
+              <div class="test-rating">
+                ${starsHtml}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  } else {
+    // Default fallback testimonials when no reviews exist
+    track.innerHTML = `
+      <div class="glass-card testimonial-slide active">
+        <div class="testimonial-body">
+          <i class="fa-solid fa-quote-left quote-icon"></i>
+          <p class="test-text" data-translate="test-1-text">"Palanpur Health Hub saved me hours of clinic waiting. I booked an appointment with Dr. Ananya (Cardiology) from home, paid securely on Razorpay, and monitored my live queue position instantly!"</p>
+          <div class="test-patient">
+            <span class="test-name" data-translate="test-1-name">Jayesh Trivedi</span>
+            <span class="test-city" data-translate="test-1-city">Palanpur, Gujarat</span>
+            <div class="test-rating">
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="glass-card testimonial-slide">
+        <div class="testimonial-body">
+          <i class="fa-solid fa-quote-left quote-icon"></i>
+          <p class="test-text" data-translate="test-2-text">"The disease mapping search is very clever. I searched 'cough' and it instantly showed Pulmonologist Dr. Rajesh Shah. The Gujarati translation is fully accurate and made booking very easy!"</p>
+          <div class="test-patient">
+            <span class="test-name" data-translate="test-2-name">Kokila Parmar</span>
+            <span class="test-city" data-translate="test-2-city">Deesa Highway, Palanpur</span>
+            <div class="test-rating">
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star-half-stroke"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card testimonial-slide">
+        <div class="testimonial-body">
+          <i class="fa-solid fa-quote-left quote-icon"></i>
+          <p class="test-text" data-translate="test-3-text">"The live doctor status indicator is a lifesaver! I saw Dr. Rajesh Shah was 'Running Late' by 20 minutes, so I adjusted my travel from Deesa accordingly and didn't have to wait in the hospital queue."</p>
+          <div class="test-patient">
+            <span class="test-name" data-translate="test-3-name">Bhavesh Mehta</span>
+            <span class="test-city" data-translate="test-3-city">Gathaman Gate, Palanpur</span>
+            <div class="test-rating">
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Update slide list reference and reset index
+  testimonialSlides = document.querySelectorAll(".testimonial-slide");
+  activeTestimonialIndex = 0;
+  
+  // Re-apply translations for default slides if any are rendered and active language is not english
+  const elements = track.querySelectorAll("[data-translate]");
+  elements.forEach(element => {
+    const key = element.getAttribute("data-translate");
+    if (TRANSLATIONS[currentLanguage] && TRANSLATIONS[currentLanguage][key]) {
+      element.innerHTML = TRANSLATIONS[currentLanguage][key];
+    }
+  });
+}
 
 
 // ================= FAQ ACCORDION MANAGER =================
@@ -2127,6 +2246,7 @@ function performLandingPageSync() {
   if (typeof populateDoctorsDropdown === 'function') {
     populateDoctorsDropdown();
   }
+  renderTestimonials();
 
   // Trigger change event if a doctor is selected to refresh dates and slots from the synced slots
   if (bookDoctor && bookDoctor.value) {
