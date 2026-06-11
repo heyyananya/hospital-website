@@ -991,8 +991,6 @@ function renderDoctorsList(filter = "all") {
     if (docReviews.length > 0) {
       const sum = docReviews.reduce((acc, r) => acc + Number(r.rating || 5), 0);
       activeRating = Math.round((sum / docReviews.length) * 10) / 10;
-    } else if (doc.rating !== null && doc.rating !== undefined && !isNaN(Number(doc.rating))) {
-      activeRating = Number(doc.rating);
     }
 
     // Build stars HTML or fallback to "No reviews"
