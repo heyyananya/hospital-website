@@ -2881,16 +2881,22 @@ class AntigravitySmartChatbot {
 
   showTyping() {
     this.hideTyping(); // avoid duplicates
+    const row = document.createElement("div");
+    row.className = "chatbot-typing-row";
+    row.id = "chatbot-typing-indicator";
+    
+    const avatar = document.createElement("div");
+    avatar.className = "chatbot-avatar-container";
+    avatar.innerHTML = `<i class="fa-solid fa-user-doctor"></i>`;
+    row.appendChild(avatar);
+
     const indicator = document.createElement("div");
     indicator.className = "chatbot-typing";
-    indicator.id = "chatbot-typing-indicator";
     indicator.innerHTML = "<span></span><span></span><span></span>";
-    this.messagesContainer.appendChild(indicator);
+    
+    row.appendChild(indicator);
+    this.messagesContainer.appendChild(row);
     this.scrollToBottom();
-  }
-
-  ariaLabelBtn(label) {
-    return `<button class="chatbot-doc-btn">${label}</button>`;
   }
 
   hideTyping() {
@@ -2899,6 +2905,16 @@ class AntigravitySmartChatbot {
   }
 
   renderMessage(text, sender = "assistant", isHtml = false) {
+    const row = document.createElement("div");
+    row.className = `chatbot-message-row ${sender}`;
+    
+    if (sender === "assistant") {
+      const avatar = document.createElement("div");
+      avatar.className = "chatbot-avatar-container";
+      avatar.innerHTML = `<i class="fa-solid fa-user-doctor"></i>`;
+      row.appendChild(avatar);
+    }
+    
     const bubble = document.createElement("div");
     bubble.className = `chatbot-bubble ${sender}`;
     if (isHtml) {
@@ -2908,7 +2924,9 @@ class AntigravitySmartChatbot {
       let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
       bubble.innerHTML = formattedText;
     }
-    this.messagesContainer.appendChild(bubble);
+    
+    row.appendChild(bubble);
+    this.messagesContainer.appendChild(row);
     this.scrollToBottom();
   }
 
@@ -2930,21 +2948,21 @@ class AntigravitySmartChatbot {
     this.state = "menu";
     
     const options = [
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_find_dept, action: () => this.startSymptomChecker() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_find_doc, action: () => this.showDoctors() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_book, action: () => this.startBooking() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_fees, action: () => this.showDoctorFees() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_opd, action: () => this.showOpdTimings() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_emergency, action: () => this.showEmergencyCard() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_nav, action: () => this.showNavigationMenu() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_tips, action: () => this.showHealthTips() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_quiz, action: () => this.startQuiz() }
+      { text: CHATBOT_TRANSLATIONS[this.lang].option_find_dept, icon: '<i class="fa-solid fa-stethoscope"></i>', action: () => this.startSymptomChecker() },
+      { text: CHATBOT_TRANSLATIONS[this.lang].option_find_doc, icon: '<i class="fa-solid fa-user-doctor"></i>', action: () => this.showDoctors() },
+      { text: CHATBOT_TRANSLATIONS[this.lang].option_book, icon: '<i class="fa-solid fa-calendar-check"></i>', action: () => this.startBooking() },
+      { text: CHATBOT_TRANSLATIONS[this.lang].option_fees, icon: '<i class="fa-solid fa-wallet"></i>', action: () => this.showDoctorFees() },
+      { text: CHATBOT_TRANSLATIONS[this.lang].option_opd, icon: '<i class="fa-solid fa-clock"></i>', action: () => this.showOpdTimings() },
+      { text: CHATBOT_TRANSLATIONS[this.lang].option_emergency, icon: '<i class="fa-solid fa-circle-exclamation text-rose-500"></i>', action: () => this.showEmergencyCard() },
+      { text: CHATBOT_TRANSLATIONS[this.lang].option_nav, icon: '<i class="fa-solid fa-compass"></i>', action: () => this.showNavigationMenu() },
+      { text: CHATBOT_TRANSLATIONS[this.lang].option_tips, icon: '<i class="fa-solid fa-lightbulb text-amber-500"></i>', action: () => this.showHealthTips() },
+      { text: CHATBOT_TRANSLATIONS[this.lang].option_quiz, icon: '<i class="fa-solid fa-circle-question"></i>', action: () => this.startQuiz() }
     ];
 
     options.forEach(opt => {
       const chip = document.createElement("button");
       chip.className = "chatbot-chip";
-      chip.innerHTML = opt.text;
+      chip.innerHTML = `${opt.icon} <span>${opt.text}</span>`;
       chip.addEventListener("click", () => {
         this.suggestionsContainer.innerHTML = "";
         opt.action();
@@ -3054,7 +3072,7 @@ class AntigravitySmartChatbot {
     this.suggestionsContainer.innerHTML = "";
     const btn = document.createElement("button");
     btn.className = "chatbot-chip";
-    btn.innerHTML = "🔙 Main Menu";
+    btn.innerHTML = `<i class="fa-solid fa-arrow-left"></i> <span>${this.lang === 'gu' ? "મુખ્ય મેનુ" : (this.lang === 'hi' ? "मुख्य मेनू" : "Main Menu")}</span>`;
     btn.addEventListener("click", () => this.showMenu());
     this.suggestionsContainer.appendChild(btn);
   }
@@ -3075,21 +3093,39 @@ class AntigravitySmartChatbot {
       this.hideTyping();
       this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].symptom_prompt);
       
-      // show common symptoms chips
+      // show common symptoms chips with icons
       const symptoms = {
-        en: ["Cough", "Chest Pain", "Joint Pain", "Headache", "Fever"],
-        gu: ["ઉધરસ", "છાતીમાં દુખાવો", "સાંધાનો દુખાવો", "માથાનો દુખાવો", "તાવ"],
-        hi: ["खांसी", "छाती में दर्द", "जोड़ों का दर्द", "सिरदर्द", "बुखार"]
+        en: [
+          { text: "Cough", icon: '<i class="fa-solid fa-wind text-sky-400"></i>' },
+          { text: "Chest Pain", icon: '<i class="fa-solid fa-heart-pulse text-rose-500"></i>' },
+          { text: "Joint Pain", icon: '<i class="fa-solid fa-bone text-amber-500"></i>' },
+          { text: "Headache", icon: '<i class="fa-solid fa-head-side-virus"></i>' },
+          { text: "Fever", icon: '<i class="fa-solid fa-temperature-high text-orange-500"></i>' }
+        ],
+        gu: [
+          { text: "ઉધરસ", icon: '<i class="fa-solid fa-wind text-sky-400"></i>' },
+          { text: "છાતીમાં દુખાવો", icon: '<i class="fa-solid fa-heart-pulse text-rose-500"></i>' },
+          { text: "સાંધાનો દુખાવો", icon: '<i class="fa-solid fa-bone text-amber-500"></i>' },
+          { text: "માથાનો દુખાવો", icon: '<i class="fa-solid fa-head-side-virus"></i>' },
+          { text: "તાવ", icon: '<i class="fa-solid fa-temperature-high text-orange-500"></i>' }
+        ],
+        hi: [
+          { text: "खांसी", icon: '<i class="fa-solid fa-wind text-sky-400"></i>' },
+          { text: "छाती में दर्द", icon: '<i class="fa-solid fa-heart-pulse text-rose-500"></i>' },
+          { text: "जोड़ों का दर्द", icon: '<i class="fa-solid fa-bone text-amber-500"></i>' },
+          { text: "सिरदर्द", icon: '<i class="fa-solid fa-head-side-virus"></i>' },
+          { text: "बुखार", icon: '<i class="fa-solid fa-temperature-high text-orange-500"></i>' }
+        ]
       };
 
       this.suggestionsContainer.innerHTML = "";
       symptoms[this.lang].forEach(sym => {
         const chip = document.createElement("button");
         chip.className = "chatbot-chip";
-        chip.innerHTML = sym;
+        chip.innerHTML = `${sym.icon} <span>${sym.text}</span>`;
         chip.addEventListener("click", () => {
-          this.renderMessage(sym, "user");
-          const dept = this.detectSymptoms(sym);
+          this.renderMessage(sym.text, "user");
+          const dept = this.detectSymptoms(sym.text);
           this.recommendDepartment(dept);
         });
         this.suggestionsContainer.appendChild(chip);
@@ -3098,7 +3134,7 @@ class AntigravitySmartChatbot {
       // add menu back button
       const backBtn = document.createElement("button");
       backBtn.className = "chatbot-chip";
-      backBtn.innerHTML = "🔙 Back";
+      backBtn.innerHTML = `<i class="fa-solid fa-arrow-left"></i> <span>${this.lang === 'gu' ? "પાછા" : (this.lang === 'hi' ? "पीछे" : "Back")}</span>`;
       backBtn.addEventListener("click", () => this.showMenu());
       this.suggestionsContainer.appendChild(backBtn);
     }, 500);
@@ -3130,13 +3166,13 @@ class AntigravitySmartChatbot {
         this.suggestionsContainer.innerHTML = "";
         const viewBtn = document.createElement("button");
         viewBtn.className = "chatbot-chip";
-        viewBtn.innerHTML = CHATBOT_TRANSLATIONS[this.lang].view_docs_btn.replace("{dept}", translatedDept);
+        viewBtn.innerHTML = `<i class="fa-solid fa-user-doctor"></i> <span>${CHATBOT_TRANSLATIONS[this.lang].view_docs_btn.replace("{dept}", translatedDept)}</span>`;
         viewBtn.addEventListener("click", () => this.showDoctors(dept));
         this.suggestionsContainer.appendChild(viewBtn);
         
         const bookBtn = document.createElement("button");
         bookBtn.className = "chatbot-chip";
-        bookBtn.innerHTML = "📅 Book in " + translatedDept;
+        bookBtn.innerHTML = `<i class="fa-solid fa-calendar-plus"></i> <span>${this.lang === 'gu' ? translatedDept + " માં બુક કરો" : (this.lang === 'hi' ? translatedDept + " में बुक करें" : "Book in " + translatedDept)}</span>`;
         bookBtn.addEventListener("click", () => {
           this.booking.dept = dept;
           this.startBooking(dept);
@@ -3176,6 +3212,13 @@ class AntigravitySmartChatbot {
 
       this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].doctor_status_title);
 
+      const statusTranslations = {
+        en: { Available: "Available", Busy: "Busy", "Running Late": "Running Late", "Left Hospital": "Left Hospital", status: "Status", fee: "Fee", exp: "Experience" },
+        gu: { Available: "ઉપલબ્ધ", Busy: "વ્યસ્ત", "Running Late": "મોડું દોડે છે", "Left Hospital": "હોસ્પિટલ છોડી દીધી", status: "સ્થિતિ", fee: "ફી", exp: "અનુભવ" },
+        hi: { Available: "उपलब्ध", Busy: "व्यस्त", "Running Late": "देरी से चल रहे हैं", "Left Hospital": "अस्पताल से चले गए", status: "स्थिति", fee: "शुल्क", exp: "अनुभव" }
+      };
+      const t = statusTranslations[this.lang];
+
       filtered.forEach(doc => {
         const card = document.createElement("div");
         card.className = "chatbot-card chatbot-doc-card";
@@ -3195,6 +3238,10 @@ class AntigravitySmartChatbot {
         else if (doc.status === "Running Late") statusClass = "text-amber-500";
         else if (doc.status === "Left Hospital") statusClass = "text-slate-400";
 
+        const translatedStatus = t[doc.status] || doc.status;
+        const docExperience = doc.exp || (this.lang === 'gu' ? "૧૦+ વર્ષ" : (this.lang === 'hi' ? "10+ वर्ष" : "10+ Yrs"));
+        const bookBtnLabel = this.lang === 'gu' ? "📅 મુલાકાત બુક કરો" : (this.lang === 'hi' ? "📅 अपॉइंटमेंट बुक करें" : "📅 Book Appointment");
+
         card.innerHTML = `
           <div class="chatbot-doc-header">
             <div class="chatbot-doc-avatar">
@@ -3210,15 +3257,15 @@ class AntigravitySmartChatbot {
             </div>
           </div>
           <div class="chatbot-doc-meta">
-            <div><i class="fa-solid fa-graduation-cap"></i> ${doc.exp || '10+ Yrs'}</div>
-            <div><i class="fa-solid fa-star"></i> ${ratingText}</div>
-            <div style="grid-column: 1/-1;"><i class="fa-solid fa-wallet"></i> Fee: ₹${doc.fee}</div>
-            <div style="grid-column: 1/-1;"><i class="fa-solid fa-calendar-days"></i> ${doc.days || 'Mon-Sat'}</div>
-            <div style="grid-column: 1/-1;" class="${statusClass} font-semibold">
-              <i class="fa-solid fa-circle-info"></i> Status: ${doc.status || 'Available'}
+            <div><i class="fa-solid fa-graduation-cap"></i> <strong>${t.exp}:</strong> ${docExperience}</div>
+            <div><i class="fa-solid fa-star"></i> <strong>Rating:</strong> ${ratingText}</div>
+            <div><i class="fa-solid fa-wallet"></i> <strong>${t.fee}:</strong> ₹${doc.fee}</div>
+            <div><i class="fa-solid fa-calendar-days"></i> <strong>Days:</strong> ${doc.days || 'Mon-Sat'}</div>
+            <div class="${statusClass} font-semibold">
+              <i class="fa-solid fa-circle-info"></i> <strong>${t.status}:</strong> ${translatedStatus}
             </div>
           </div>
-          <button class="chatbot-doc-btn">📅 Book Appointment</button>
+          <button class="chatbot-doc-btn">${bookBtnLabel}</button>
         `;
 
         card.querySelector("button").addEventListener("click", () => {
@@ -3239,7 +3286,8 @@ class AntigravitySmartChatbot {
     this.showTyping();
     setTimeout(() => {
       this.hideTyping();
-      let text = "<strong>" + (this.lang === 'gu' ? "ડોક્ટર પરામર્શ ફી:" : (this.lang === 'hi' ? "डॉक्टर परामर्श शुल्क:" : "Doctor consultation fees:")) + "</strong><br><br>";
+      const feeLabel = this.lang === 'gu' ? "ડોક્ટર પરામર્શ ફી:" : (this.lang === 'hi' ? "डॉक्टर परामर्श शुल्क:" : "Doctor Consultation Fees:");
+      let text = `<strong><i class="fa-solid fa-wallet text-primary"></i> ${feeLabel}</strong><br><br>`;
       doctors.forEach(doc => {
         text += `• ${doc.name} (${this.getTranslatedDept(doc.specialty)}): <strong>₹${doc.fee}</strong><br>`;
       });
@@ -3256,12 +3304,21 @@ class AntigravitySmartChatbot {
       this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].nav_facility_prompt);
       
       const areas = ["ICU", "Emergency", "Cardiology", "Orthopedics", "Pediatrics", "Gynecology"];
+      const areaIcons = {
+        "ICU": '<i class="fa-solid fa-bed-pulse text-indigo-500"></i>',
+        "Emergency": '<i class="fa-solid fa-truck-medical text-rose-500"></i>',
+        "Cardiology": '<i class="fa-solid fa-heart-pulse text-rose-500"></i>',
+        "Orthopedics": '<i class="fa-solid fa-bone text-amber-600"></i>',
+        "Pediatrics": '<i class="fa-solid fa-baby text-sky-500"></i>',
+        "Gynecology": '<i class="fa-solid fa-venus text-pink-500"></i>'
+      };
+
       this.suggestionsContainer.innerHTML = "";
       
       areas.forEach(area => {
         const chip = document.createElement("button");
         chip.className = "chatbot-chip";
-        chip.innerHTML = area;
+        chip.innerHTML = `${areaIcons[area] || '<i class="fa-solid fa-hospital"></i>'} <span>${area}</span>`;
         chip.addEventListener("click", () => {
           this.renderMessage(area, "user");
           this.showHospitalDirections(area);
@@ -3326,7 +3383,7 @@ class AntigravitySmartChatbot {
         if (currentUser) {
           const chip = document.createElement("button");
           chip.className = "chatbot-chip";
-          chip.innerHTML = currentUser.name;
+          chip.innerHTML = `<i class="fa-solid fa-user"></i> <span>${currentUser.name}</span>`;
           chip.addEventListener("click", () => {
             this.renderMessage(currentUser.name, "user");
             this.booking.name = currentUser.name;
@@ -3351,7 +3408,7 @@ class AntigravitySmartChatbot {
         depts.forEach(d => {
           const chip = document.createElement("button");
           chip.className = "chatbot-chip";
-          chip.innerHTML = this.getTranslatedDept(d.name);
+          chip.innerHTML = `<i class="fa-solid fa-stethoscope text-primary"></i> <span>${this.getTranslatedDept(d.name)}</span>`;
           chip.addEventListener("click", () => {
             this.renderMessage(this.getTranslatedDept(d.name), "user");
             this.booking.dept = d.name;
@@ -3376,7 +3433,7 @@ class AntigravitySmartChatbot {
         filteredDocs.forEach(doc => {
           const chip = document.createElement("button");
           chip.className = "chatbot-chip";
-          chip.innerHTML = doc.name;
+          chip.innerHTML = `<i class="fa-solid fa-user-doctor text-primary"></i> <span>${doc.name}</span>`;
           chip.addEventListener("click", () => {
             this.renderMessage(doc.name, "user");
             this.booking.doctor = doc;
@@ -3408,7 +3465,7 @@ class AntigravitySmartChatbot {
         uniqueDates.forEach(d => {
           const chip = document.createElement("button");
           chip.className = "chatbot-chip";
-          chip.innerHTML = d;
+          chip.innerHTML = `<i class="fa-solid fa-calendar-day"></i> <span>${d}</span>`;
           chip.addEventListener("click", () => {
             this.renderMessage(d, "user");
             this.booking.date = d;
@@ -3435,7 +3492,7 @@ class AntigravitySmartChatbot {
         times.forEach(timeVal => {
           const chip = document.createElement("button");
           chip.className = "chatbot-chip";
-          chip.innerHTML = timeVal;
+          chip.innerHTML = `<i class="fa-solid fa-clock"></i> <span>${timeVal}</span>`;
           chip.addEventListener("click", () => {
             this.renderMessage(timeVal, "user");
             this.booking.slot = timeVal;
@@ -3449,20 +3506,35 @@ class AntigravitySmartChatbot {
         this.state = "booking_symptoms";
         this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].booking_step_symptoms);
         
-        // common suggestions
+        // common suggestions with icons
         const symOptions = {
-          en: ["General Checkup", "Cough/Fever", "Routine Review", "Pain consultation"],
-          gu: ["સામાન્ય તપાસ", "તાવ/ઉધરસ", "નિયમિત ચેકઅપ", "દુખાવાની સલાહ"],
-          hi: ["सामान्य जांच", "बुखार/खांसी", "नियमित जांच", "दर्द परामर्श"]
+          en: [
+            { text: "General Checkup", icon: '<i class="fa-solid fa-stethoscope"></i>' },
+            { text: "Cough/Fever", icon: '<i class="fa-solid fa-temperature-high text-orange-500"></i>' },
+            { text: "Routine Review", icon: '<i class="fa-solid fa-clipboard-check text-emerald-500"></i>' },
+            { text: "Pain consultation", icon: '<i class="fa-solid fa-hand-holding-medical text-amber-500"></i>' }
+          ],
+          gu: [
+            { text: "સામાન્ય તપાસ", icon: '<i class="fa-solid fa-stethoscope"></i>' },
+            { text: "તાવ/ઉધરસ", icon: '<i class="fa-solid fa-temperature-high text-orange-500"></i>' },
+            { text: "નિયમિત ચેકઅપ", icon: '<i class="fa-solid fa-clipboard-check text-emerald-500"></i>' },
+            { text: "દુખાવાની સલાહ", icon: '<i class="fa-solid fa-hand-holding-medical text-amber-500"></i>' }
+          ],
+          hi: [
+            { text: "सामान्य जांच", icon: '<i class="fa-solid fa-stethoscope"></i>' },
+            { text: "बुखार/खांसी", icon: '<i class="fa-solid fa-temperature-high text-orange-500"></i>' },
+            { text: "नियमित जांच", icon: '<i class="fa-solid fa-clipboard-check text-emerald-500"></i>' },
+            { text: "दर्द परामर्श", icon: '<i class="fa-solid fa-hand-holding-medical text-amber-500"></i>' }
+          ]
         };
 
         symOptions[this.lang].forEach(so => {
           const chip = document.createElement("button");
           chip.className = "chatbot-chip";
-          chip.innerHTML = so;
+          chip.innerHTML = `${so.icon} <span>${so.text}</span>`;
           chip.addEventListener("click", () => {
-            this.renderMessage(so, "user");
-            this.booking.symptoms = so;
+            this.renderMessage(so.text, "user");
+            this.booking.symptoms = so.text;
             this.bookingFlowStep("summary");
           });
           this.suggestionsContainer.appendChild(chip);
@@ -3547,10 +3619,10 @@ class AntigravitySmartChatbot {
       const card = document.createElement("div");
       card.className = "chatbot-card";
       card.innerHTML = `
-        <h4 style="font-weight: 700; color: var(--primary); font-size: 0.86rem; margin-bottom: 6px;">
-          ${CHATBOT_TRANSLATIONS[this.lang].health_tips_title}
+        <h4 style="font-weight: 700; color: var(--primary); font-size: 0.88rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-heart-pulse text-rose-500"></i> ${CHATBOT_TRANSLATIONS[this.lang].health_tips_title}
         </h4>
-        <p style="font-size: 0.82rem; line-height: 1.45; color: var(--text-secondary); margin: 0;">
+        <p style="font-size: 0.84rem; line-height: 1.45; color: var(--text-secondary); margin: 0;">
           ${randomTip}
         </p>
       `;
@@ -3574,7 +3646,7 @@ class AntigravitySmartChatbot {
       this.suggestionsContainer.innerHTML = "";
       const startBtn = document.createElement("button");
       startBtn.className = "chatbot-chip";
-      startBtn.innerHTML = CHATBOT_TRANSLATIONS[this.lang].quiz_ready_btn;
+      startBtn.innerHTML = `<i class="fa-solid fa-play text-emerald-500"></i> <span>${CHATBOT_TRANSLATIONS[this.lang].quiz_ready_btn}</span>`;
       startBtn.addEventListener("click", () => {
         this.renderQuizQuestion();
       });
@@ -3582,7 +3654,7 @@ class AntigravitySmartChatbot {
       
       const cancelBtn = document.createElement("button");
       cancelBtn.className = "chatbot-chip";
-      cancelBtn.innerHTML = "🔙 Cancel";
+      cancelBtn.innerHTML = `<i class="fa-solid fa-xmark text-rose-500"></i> <span>${this.lang === 'gu' ? "રદ કરો" : (this.lang === 'hi' ? "रद्द करें" : "Cancel")}</span>`;
       cancelBtn.addEventListener("click", () => this.showMenu());
       this.suggestionsContainer.appendChild(cancelBtn);
     }, 600);
@@ -3606,9 +3678,12 @@ class AntigravitySmartChatbot {
         optionsHtml += `<button class="chatbot-quiz-opt-btn" data-index="${idx}">${opt}</button>`;
       });
 
+      const qLabel = this.lang === 'gu' ? "પ્રશ્ન" : (this.lang === 'hi' ? "प्रश्न" : "Question");
+      const ofLabel = this.lang === 'gu' ? "માંથી" : (this.lang === 'hi' ? "में से" : "of");
+
       card.innerHTML = `
-        <div class="chatbot-quiz-title">Question ${this.quiz.currentQuestion + 1} of 3:</div>
-        <p style="font-size:0.82rem; font-weight:600; color:var(--dark); margin:5px 0;">${qObj.q}</p>
+        <div class="chatbot-quiz-title">${qLabel} ${this.quiz.currentQuestion + 1} ${ofLabel} 3:</div>
+        <p style="font-size:0.86rem; font-weight:600; color:var(--dark); margin:6px 0;">${qObj.q}</p>
         <div class="chatbot-quiz-options">${optionsHtml}</div>
       `;
 
