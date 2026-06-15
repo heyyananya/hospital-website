@@ -1012,5 +1012,47 @@
     <span id="floating-lang-text" data-translate="floating-lang">Language / ભાષા</span>
   </button>
 
+  <!-- Floating Chatbot Action Button (FAB) -->
+  <button id="chatbot-fab" class="chatbot-fab-pulse" aria-label="Open Hospital Assistant ChatBot">
+    <i class="fa-solid fa-comments"></i>
+  </button>
+
+  <!-- Hospital Assistant ChatBot Container -->
+  <div id="chatbot-container" class="hidden-chatbot">
+    <div class="chatbot-header">
+      <div class="chatbot-header-info">
+        <i class="fa-solid fa-heart-pulse chatbot-header-logo"></i>
+        <div class="chatbot-title-container">
+          <span class="chatbot-title" data-translate="chatbot-header-title">Hospital Assistant ChatBot</span>
+          <div class="chatbot-status-row">
+            <span class="chatbot-status-dot"></span>
+            <span class="chatbot-status-text" data-translate="chatbot-status-online">Online</span>
+          </div>
+        </div>
+      </div>
+      <button id="chatbot-close-btn" aria-label="Close Chatbox">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    
+    <div class="chatbot-messages" id="chat-messages">
+      <!-- Dynamic chat bubbles and cards injected by JS -->
+    </div>
+    
+    <div class="chatbot-suggestions" id="chat-suggestions">
+      <!-- Dynamic action chips/options injected by JS -->
+    </div>
+    
+    <form class="chatbot-input-form" id="chatbot-input-form">
+      <button type="button" class="chatbot-mic-btn" id="chatbot-mic-btn" title="Voice assistance (visual placeholder)">
+        <i class="fa-solid fa-microphone"></i>
+      </button>
+      <input type="text" class="chatbot-input" id="chatbot-input-field" placeholder="Ask something..." autocomplete="off">
+      <button type="submit" class="chatbot-send-btn" id="chatbot-send-btn" aria-label="Send message">
+        <i class="fa-solid fa-paper-plane"></i>
+      </button>
+    </form>
+  </div>
+
 </body>
 </html>
