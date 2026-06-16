@@ -4361,15 +4361,15 @@ body.chatbot-open {
     font-size: 2.8rem !important;
   }
   .loader-welcome {
-    font-size: 0.7rem !important;
+    font-size: 0.8rem !important;
     letter-spacing: 0.5px !important;
   }
   .loader-line-1 {
-    font-size: 0.7rem !important;
+    font-size: 0.8rem !important;
     letter-spacing: 1.5px !important;
   }
   .loader-line-2, .loader-line-3 {
-    font-size: 1.35rem !important;
+    font-size: 1.6rem !important;
   }
   #chatbot-container, .chatbot-messages {
     overscroll-behavior: contain;
