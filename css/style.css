@@ -3263,14 +3263,19 @@ select option {
     right: 12px;
     left: 12px;
     bottom: 15px;
-    height: calc(100vh - 30px);
-    max-height: calc(100vh - 30px);
+    height: 520px;
+    max-height: 80vh;
     border-radius: 22px;
     z-index: 1000000 !important;
   }
   #floating-lang-trigger {
     bottom: 25px;
     left: 12px;
+  }
+  .modal-content, .razorpay-modal {
+    padding: 24px 16px !important;
+    width: 92% !important;
+    max-width: 380px !important;
   }
 }
 

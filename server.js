@@ -230,11 +230,19 @@ const getRandomGender = () => {
   return 'Other';
 };
 
-// Serve static frontend files
+// Serve static frontend files with cache disabled to prevent mobile caching issues
+const staticOptions = {
+  etag: false,
+  maxAge: 0,
+  setHeaders: (res, path) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  }
+};
+
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, staticOptions));
 } else {
-  app.use(express.static(__dirname));
+  app.use(express.static(__dirname, staticOptions));
 }
 
 // Test database connection endpoint (useful for debugging)

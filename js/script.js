@@ -3190,6 +3190,28 @@ class CareMateAI {
     return "en";
   }
 
+  getDoctorAverageRating(docId) {
+    const reviews = JSON.parse(localStorage.getItem("phh_reviews")) || [];
+    const docReviews = reviews.filter(r => r && (String(r.doctorId) === String(docId) || String(r.doctor_id) === String(docId)));
+    if (docReviews.length === 0) return null;
+    const sum = docReviews.reduce((acc, r) => acc + Number(r.rating || 5), 0);
+    return Math.round((sum / docReviews.length) * 10) / 10;
+  }
+
+  matchDoctorByName(text) {
+    const raw = text.toLowerCase().replace(/dr\./g, "").replace(/dr /g, "").trim();
+    if (raw.length < 3) return null;
+    const docs = JSON.parse(localStorage.getItem("phh_doctors")) || [];
+    for (const doc of docs) {
+      if (doc.status === 'Pending') continue;
+      const docRawName = doc.name.toLowerCase().replace(/dr\./g, "").replace(/dr /g, "").trim();
+      if (docRawName.includes(raw) || raw.includes(docRawName)) {
+        return doc;
+      }
+    }
+    return null;
+  }
+
   matchDirectDepartment(text) {
     const raw = text.toLowerCase();
     const depts = {
@@ -3528,7 +3550,8 @@ class CareMateAI {
   }
 
   getDoctorExplanation(doc, dept) {
-    const isHighestRating = doc.rating >= 4.8;
+    const avgRating = this.getDoctorAverageRating(doc.id) || 5;
+    const isHighestRating = avgRating >= 4.8;
     const isExperienced = parseInt(doc.exp) >= 15;
     
     if (this.lang === "gu") {
@@ -3544,6 +3567,74 @@ class CareMateAI {
       if (isExperienced) return `Dr. ${doc.name} is recommended because they have ${doc.exp} of extensive clinical experience in this field.`;
       return `Dr. ${doc.name} is available for consultation in this department.`;
     }
+  }
+
+  showSingleDoctorCard(doc) {
+    const cardContainer = document.createElement("div");
+    cardContainer.style.display = "flex";
+    cardContainer.style.flexDirection = "column";
+    cardContainer.style.gap = "10px";
+    cardContainer.style.marginTop = "8px";
+
+    const card = document.createElement("div");
+    card.className = "glass-card doctor-card";
+    card.style.margin = "0";
+    card.style.padding = "10px";
+    
+    const avgRating = this.getDoctorAverageRating(doc.id);
+    const starRating = avgRating 
+      ? `<i class="fa-solid fa-star" style="color: #fbbf24;"></i> <strong>${avgRating.toFixed(1)}</strong>`
+      : `<i class="fa-regular fa-star" style="color: #cbd5e1;"></i> <span style="font-size:0.7rem;">(No reviews)</span>`;
+    
+    const explanation = this.getDoctorExplanation(doc, doc.specialty);
+
+    card.innerHTML = `
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <div style="width: 45px; height: 45px; border-radius: 50%; overflow: hidden; background: #e2e8f0; flex-shrink: 0;">
+          <svg viewBox="0 0 100 100" width="100%" height="100%">
+            <circle cx="50" cy="50" r="45" fill="#e0f2fe"/>
+            <path d="M50,22 C58,22 65,29 65,37 C65,45 58,52 50,52 C42,52 35,45 35,37 C35,29 42,22 50,22 Z" fill="#0284c7"/>
+            <path d="M22,78 C22,64 34,58 50,58 C66,58 78,64 78,78 Z" fill="#0369a1"/>
+          </svg>
+        </div>
+        <div style="flex-grow: 1;">
+          <h4 style="font-size: 0.85rem; margin: 0; color: #0f172a;">${doc.name}</h4>
+          <div style="font-size: 0.72rem; color: #64748b;">${doc.specialty} • ${doc.exp} Exp</div>
+          <div style="font-size: 0.72rem; margin-top: 2px;">
+            ${starRating} • Fee: <strong style="color: var(--primary);">₹${doc.fee}</strong>
+          </div>
+          <div style="font-size: 0.65rem; color: var(--primary); font-style: italic; margin-top: 4px; border-top: 1px dashed rgba(0, 102, 255, 0.1); padding-top: 4px;">
+            <i class="fa-solid fa-sparkles"></i> ${explanation}
+          </div>
+        </div>
+      </div>
+      <div style="margin-top: 8px; display: flex; gap: 6px;">
+        <button class="caremate-reminder-btn primary" style="padding: 4px 8px; font-size: 0.7rem;" id="book-single-btn-${doc.id}">
+          Book Appointment
+        </button>
+        <button class="caremate-reminder-btn secondary" style="padding: 4px 8px; font-size: 0.7rem;" id="comp-single-btn-${doc.id}">
+          Compare
+        </button>
+      </div>
+    `;
+
+    card.querySelector(`#book-single-btn-${doc.id}`).addEventListener("click", () => {
+      this.renderMessage(`Book appointment with ${doc.name}`, "user");
+      this.flowData.doctorId = doc.id;
+      this.flowData.dept = doc.specialty;
+      this.flowData.doctor = doc;
+      this.promptBookingDetails();
+    });
+
+    card.querySelector(`#comp-single-btn-${doc.id}`).addEventListener("click", () => {
+      this.renderMessage(`Compare ${doc.name}`, "user");
+      this.compareSingleDoctor(doc);
+    });
+
+    cardContainer.appendChild(card);
+    this.renderMessage(cardContainer, "assistant", "widget");
+    this.suggestionsContainer.innerHTML = "";
+    this.showMenu();
   }
 
   handleUserInput(text) {
@@ -3608,6 +3699,18 @@ class CareMateAI {
       this.showTyping();
       setTimeout(() => {
         this.hideTyping();
+
+        const matchedDoc = this.matchDoctorByName(text);
+        if (matchedDoc) {
+          const specialty = matchedDoc.specialty;
+          const docRecMsg = this.lang === 'gu'
+            ? `મને ડૉ. **${matchedDoc.name}** મળ્યા જે **${specialty}** ના નિષ્ણાત છે. અહીં તેમની વિગતો અને ઉપલબ્ધ એપોઇન્ટમેન્ટ સ્લોટ્સ છે:`
+            : (this.lang === 'hi' ? `मुझे डॉ. **${matchedDoc.name}** मिले जो **${specialty}** के विशेषज्ञ हैं। यहाँ उनका विवरण और उपलब्ध स्लॉट हैं:` : `I found Dr. **${matchedDoc.name}** who is a specialist in **${specialty}**. Here is their information and slot details:`);
+          
+          this.renderMessage(docRecMsg);
+          this.showSingleDoctorCard(matchedDoc);
+          return;
+        }
 
         const directDept = this.matchDirectDepartment(text);
         if (directDept) {
@@ -3730,7 +3833,9 @@ class CareMateAI {
 
     activeDocs.sort((a, b) => {
       if (sortBy === "rating") {
-        return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+        const ratingA = this.getDoctorAverageRating(a.id) || 0;
+        const ratingB = this.getDoctorAverageRating(b.id) || 0;
+        return ratingB - ratingA;
       } else if (sortBy === "fee") {
         return (Number(a.fee) || 0) - (Number(b.fee) || 0);
       } else if (sortBy === "exp") {
@@ -3756,8 +3861,9 @@ class CareMateAI {
       card.style.margin = "0";
       card.style.padding = "10px";
       
-      const starRating = doc.rating 
-        ? `<i class="fa-solid fa-star" style="color: #fbbf24;"></i> <strong>${doc.rating}</strong>`
+      const avgRating = this.getDoctorAverageRating(doc.id);
+      const starRating = avgRating 
+        ? `<i class="fa-solid fa-star" style="color: #fbbf24;"></i> <strong>${avgRating.toFixed(1)}</strong>`
         : `<i class="fa-regular fa-star" style="color: #cbd5e1;"></i> <span style="font-size:0.7rem;">(No reviews)</span>`;
       
       card.innerHTML = `
