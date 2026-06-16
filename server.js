@@ -374,20 +374,20 @@ app.post('/api/auth/send-otp', async (req, res) => {
     const mailOptions = {
       from: process.env.SMTP_FROM || `"Superspeciality Doctors Consultation" <newwebsite1979@gmail.com>`,
       to: emailVal,
-      subject: 'Your Secure Verification OTP Code - Palanpur Health Hub',
+      subject: 'Your Secure Verification OTP Code - Superspeciality Doctors Consultation',
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 550px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
           <!-- Top bar with brand background -->
           <div style="background: linear-gradient(135deg, #0066FF 0%, #00F0FF 100%); padding: 30px 20px; text-align: center;">
             <img src="cid:hospital_logo" alt="Hospital Logo" style="width: 85px; height: 85px; border-radius: 50%; border: 3px solid #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: block; margin: 0 auto 12px;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 1.4rem; font-weight: 700; letter-spacing: 0.5px;">Palanpur Health Hub</h1>
-            <p style="color: #e0f2fe; margin: 4px 0 0; font-size: 0.85rem; font-weight: 500;">Superspeciality Doctors Consultation</p>
+            <h1 style="color: #ffffff; margin: 0; font-size: 1.3rem; font-weight: 700; letter-spacing: 0.5px;">Superspeciality Doctors Consultation</h1>
+            <p style="color: #e0f2fe; margin: 4px 0 0; font-size: 0.85rem; font-weight: 500;">Secure Patient Portal</p>
           </div>
           
           <!-- Email Content Body -->
           <div style="padding: 35px 25px; color: #334155;">
             <p style="font-size: 1rem; line-height: 1.5; margin: 0 0 20px;">Dear Patient,</p>
-            <p style="font-size: 0.95rem; line-height: 1.5; margin: 0 0 25px; color: #475569;">You have requested a secure One-Time Password (OTP) to log in or register at the **Palanpur Health Hub** patient portal.</p>
+            <p style="font-size: 0.95rem; line-height: 1.5; margin: 0 0 25px; color: #475569;">You have requested a secure One-Time Password (OTP) to log in or register at the **Superspeciality Doctors Consultation** patient portal.</p>
             
             <!-- OTP Callout Block -->
             <div style="background-color: #f0f7ff; border: 1px solid #93c5fd; border-radius: 8px; padding: 25px; text-align: center; margin: 25px 0;">
@@ -399,18 +399,18 @@ app.post('/api/auth/send-otp', async (req, res) => {
             <!-- Security Warning -->
             <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 15px; border-radius: 0 6px 6px 0; margin-bottom: 25px;">
               <p style="margin: 0; font-size: 0.85rem; color: #b45309; line-height: 1.4;">
-                <strong>Security Alert:</strong> Never share this code with anyone. Palanpur Health Hub staff will never call or message you to ask for this OTP. If you did not request this, please ignore this email.
+                <strong>Security Alert:</strong> Never share this code with anyone. Superspeciality Doctors Consultation staff will never call or message you to ask for this OTP. If you did not request this, please ignore this email.
               </p>
             </div>
             
-            <p style="font-size: 0.9rem; line-height: 1.5; margin: 0; color: #64748b;">Warm regards,<br><strong>Patient Support Team</strong><br>Palanpur Health Hub</p>
+            <p style="font-size: 0.9rem; line-height: 1.5; margin: 0; color: #64748b;">Warm regards,<br><strong>Patient Support Team</strong><br>Superspeciality Doctors Consultation</p>
           </div>
           
           <!-- Email Footer -->
           <div style="background-color: #f8fafc; border-top: 1px solid #f1f5f9; padding: 20px; text-align: center; font-size: 0.75rem; color: #94a3b8; line-height: 1.5;">
-            <p style="margin: 0 0 6px;">Palanpur Health Hub, Palanpur Highway, Gujarat, India</p>
-            <p style="margin: 0 0 10px;">Contact support at <a href="mailto:support@palanpurhealthhub.com" style="color: #0066FF; text-decoration: none;">support@palanpurhealthhub.com</a></p>
-            <p style="margin: 0; font-size: 0.7rem; color: #cbd5e1;">&copy; 2026 Palanpur Health Hub. Smart Hospital Solutions.</p>
+            <p style="margin: 0 0 6px;">Superspeciality Doctors Consultation, Palanpur Highway, Gujarat, India</p>
+            <p style="margin: 0 0 10px;">Contact support at <a href="mailto:newwebsite1979@gmail.com" style="color: #0066FF; text-decoration: none;">newwebsite1979@gmail.com</a></p>
+            <p style="margin: 0; font-size: 0.7rem; color: #cbd5e1;">&copy; 2026 Superspeciality Doctors Consultation. Smart Hospital Solutions.</p>
           </div>
         </div>
       `,
