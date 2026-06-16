@@ -3035,6 +3035,7 @@ class CareMateAI {
       let parsed = content
         .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
         .replace(/\*(.*?)\*/g, "<em>$1</em>")
+        .replace(/\\n/g, "<br>")
         .replace(/\n/g, "<br>");
       bubble.innerHTML = parsed;
     } else {

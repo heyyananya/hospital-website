@@ -3928,6 +3928,7 @@ select option {
   justify-content: center;
   border-radius: 50%;
   transition: all 0.25s ease;
+  flex-shrink: 0;
 }
 
 .chatbot-mic-btn:hover {
@@ -3938,6 +3939,7 @@ select option {
 
 .chatbot-input {
   flex-grow: 1;
+  min-width: 0;
   border: 1.5px solid #e2e8f0;
   background: rgba(248, 250, 252, 0.8);
   outline: none;
@@ -3971,6 +3973,7 @@ select option {
   justify-content: center;
   border-radius: 50%;
   transition: all 0.25s ease;
+  flex-shrink: 0;
 }
 
 .chatbot-send-btn:hover {
