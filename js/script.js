@@ -2959,8 +2959,6 @@ class CareMateAI {
       this.history = [];
       this.flowData = {};
       this.askForLanguageSelection();
-      this.checkUpcomingAppointments();
-      this.checkForPendingReviews();
     } else {
       this.container.classList.add("hidden-chatbot");
       
@@ -2991,37 +2989,44 @@ class CareMateAI {
     this.suggestionsContainer.innerHTML = "";
     
     const languages = [
-      { text: "English", code: "en" },
-      { text: "ગુજરાતી (Gujarati)", code: "gu" },
-      { text: "हिंदी (Hindi)", code: "hi" }
+      { html: '<i class="fa-solid fa-language"></i> English', label: "English", code: "en" },
+      { html: '<i class="fa-solid fa-language"></i> ગુજરાતી (Gujarati)', label: "ગુજરાતી (Gujarati)", code: "gu" },
+      { html: '<i class="fa-solid fa-language"></i> हिंदी (Hindi)', label: "हिंदी (Hindi)", code: "hi" }
     ];
     
     languages.forEach(langOption => {
       const btn = document.createElement("button");
-      btn.className = "chatbot-chip-btn";
-      btn.textContent = langOption.text;
+      btn.className = "chatbot-chip";
+      btn.innerHTML = langOption.html;
       btn.addEventListener("click", () => {
-        // User selected a language
-        this.renderMessage(langOption.text, "user");
-        this.state = "idle";
-        
-        // Load and save the selected language
-        this.lang = langOption.code;
-        localStorage.setItem("phh_lang", langOption.code);
-        if (typeof setLanguage === "function") {
-          setLanguage(langOption.code);
-        }
-        this.loadLanguage(langOption.code);
-        
-        // Trigger a custom local storage sync event if needed
-        window.dispatchEvent(new Event("storage_local"));
-        
-        // Show welcome greeting and suggestions menu
-        this.suggestionsContainer.innerHTML = "";
-        this.showGreeting();
+        this.renderMessage(langOption.label, "user");
+        this.setChatLanguage(langOption.code);
       });
       this.suggestionsContainer.appendChild(btn);
     });
+  }
+
+  setChatLanguage(langCode) {
+    this.state = "idle";
+    
+    // Load and save the selected language
+    this.lang = langCode;
+    localStorage.setItem("phh_lang", langCode);
+    if (typeof setLanguage === "function") {
+      setLanguage(langCode);
+    }
+    this.loadLanguage(langCode);
+    
+    // Trigger a custom local storage sync event if needed
+    window.dispatchEvent(new Event("storage_local"));
+    
+    // Show welcome greeting and suggestions menu
+    this.suggestionsContainer.innerHTML = "";
+    this.showGreeting();
+
+    // Check for appointments and reviews in the selected language
+    this.checkUpcomingAppointments();
+    this.checkForPendingReviews();
   }
 
   showGreeting() {
@@ -3222,9 +3227,20 @@ class CareMateAI {
       if (this.isRecording) {
         this.recognition.stop();
       } else {
-        if (this.lang === "gu") this.recognition.lang = "gu-IN";
-        else if (this.lang === "hi") this.recognition.lang = "hi-IN";
-        else this.recognition.lang = "en-US";
+        if (this.state === "language_selection") {
+          const navLang = (navigator.language || navigator.userLanguage || "en").toLowerCase();
+          if (navLang.startsWith("gu")) {
+            this.recognition.lang = "gu-IN";
+          } else if (navLang.startsWith("hi")) {
+            this.recognition.lang = "hi-IN";
+          } else {
+            this.recognition.lang = "en-US";
+          }
+        } else {
+          if (this.lang === "gu") this.recognition.lang = "gu-IN";
+          else if (this.lang === "hi") this.recognition.lang = "hi-IN";
+          else this.recognition.lang = "en-US";
+        }
         
         this.recognition.start();
       }
@@ -3464,7 +3480,11 @@ class CareMateAI {
     this.state = "clarifying";
     
     let questionText = "";
-    if (topDept === "Cardiology" || secondDept === "Cardiology" || topDept === "Pulmonology" || secondDept === "Pulmonology") {
+    const concatenatedText = this.flowData.symptomHistory.join(" ");
+    const raw = concatenatedText.toLowerCase();
+    const hasCardioPulmoKeywords = ["chest", "heart", "breath", "saans", "saas", "shvas", "cough", "khansi", "khas", "chhati", "છાતી", "હૃદય", "શ્વાસ", "ઉધરસ", "ખાંસી", "खांसी", "सांस", "छाती", "दिल"].some(kw => raw.includes(kw));
+
+    if ((topDept === "Cardiology" || secondDept === "Cardiology" || topDept === "Pulmonology" || secondDept === "Pulmonology") && hasCardioPulmoKeywords) {
       this.flowData.clarifyingType = "cardio_pulmo";
       if (this.lang === "gu") {
         questionText = "હું સમજી શકું છું. શ્વાસ લેવામાં તકલીફની સાથે, શું તમને છાતીમાં કોઈ દુખાવો અથવા ધબકારા પણ અનુભવાય છે?";
@@ -3536,8 +3556,6 @@ class CareMateAI {
     if (type === "cardio_pulmo") {
       if (isAffirmative) {
         this.flowData.symptomHistory.push("chest pain");
-      } else {
-        this.flowData.symptomHistory.push("no chest pain");
       }
     } else if (type === "neuro_general") {
       if (isAffirmative) {
@@ -3595,24 +3613,38 @@ class CareMateAI {
   handleLowConfidence() {
     let msg = "";
     if (this.lang === "gu") {
-      msg = `હું તમારા વર્ણવેલ લક્ષણો સમજી શક્યો નથી. કૃપા કરીને થોડી વધુ વિગતો આપો, અથવા અમારા જનરલ મેડિસિન ડૉક્ટરની સલાહ લો.`;
+      msg = `હું તમારા વર્ણવેલ લક્ષણો સમજી શક્યો નથી. કૃપા કરીને થોડી વધુ વિગતો આપો, અથવા નીચેનામાંથી કોઈ એક વિભાગ પસંદ કરો:`;
     } else if (this.lang === "hi") {
-      msg = `मैं आपके बताए गए लक्षणों को ठीक से समझ नहीं पाया। कृपया थोड़ा और विवरण दें, या हमारे जनरल मेडिसिन डॉक्टर से सलाह लें।`;
+      msg = `मैं आपके बताए गए लक्षणों को ठीक से समझ नहीं पाया। कृपया थोड़ा और विवरण दें, या नीचे दिए गए विभागों में से एक चुनें:`;
     } else {
-      msg = `I couldn't clarify your symptoms. Could you please describe what you are feeling in more detail, or would you like to consult our General Medicine team?`;
+      msg = `I couldn't clarify your symptoms. Could you please describe what you are feeling in more detail, or would you like to consult one of our departments?`;
     }
 
     this.renderMessage(msg);
     this.suggestionsContainer.innerHTML = "";
-    const gmText = this.lang === "gu" ? "જનરલ મેડિસિન ડૉક્ટર" : (this.lang === "hi" ? "जनरल मेडिसिन डॉक्टर" : "General Medicine Doctors");
-    const chip = document.createElement("button");
-    chip.className = "chatbot-chip";
-    chip.textContent = gmText;
-    chip.addEventListener("click", () => {
-      this.renderMessage(gmText, "user");
-      this.recommendDepartment("General Medicine");
+    
+    const departments = [
+      { id: "General Medicine", en: "General Medicine", hi: "सामान्य चिकित्सा (General Medicine)", gu: "જનરલ મેડિસિન" },
+      { id: "Cardiology", en: "Cardiology", hi: "हृदय रोग (Cardiology)", gu: "કાર્ડિયોલોજી" },
+      { id: "Pulmonology", en: "Pulmonology", hi: "फेफड़े का रोग (Pulmonology)", gu: "પલ્મોનોલોજી" },
+      { id: "Orthopedics", en: "Orthopedics", hi: "अस्थि रोग (Orthopedics)", gu: "ઓર્થોપેડિક્સ" },
+      { id: "Pediatrics", en: "Pediatrics", hi: "बाल रोग (Pediatrics)", gu: "બાળરોગ વિભાગ" },
+      { id: "Neurology", en: "Neurology", hi: "तंत्रिका विज्ञान (Neurology)", gu: "ન્યુરોલોજી" },
+      { id: "Gynecology", en: "Gynecology", hi: "स्त्री रोग (Gynecology)", gu: "સ્ત્રીરોગવિજ્ઞાન" },
+      { id: "Dermatology", en: "Dermatology", hi: "त्वचा रोग (Dermatology)", gu: "ત્વચારોગવિજ્ઞાન" },
+      { id: "Psychology", en: "Psychology", hi: "मनोविज्ञान (Psychology)", gu: "મનોવિજ્ઞાન" }
+    ];
+
+    departments.forEach(dept => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = this.lang === "gu" ? dept.gu : (this.lang === "hi" ? dept.hi : dept.en);
+      chip.addEventListener("click", () => {
+        this.renderMessage(chip.textContent, "user");
+        this.recommendDepartment(dept.id);
+      });
+      this.suggestionsContainer.appendChild(chip);
     });
-    this.suggestionsContainer.appendChild(chip);
   }
 
   getDoctorExplanation(doc, dept) {
@@ -3711,6 +3743,24 @@ class CareMateAI {
 
     if (this.detectEmergency(text)) {
       this.triggerEmergencyMode();
+      return;
+    }
+
+    if (this.state === "language_selection") {
+      const lower = text.toLowerCase().trim();
+      if (lower.includes("english") || lower.includes("eng")) {
+        this.setChatLanguage("en");
+      } else if (lower.includes("gujarati") || lower.includes("guj") || lower.includes("ગુજરાતી")) {
+        this.setChatLanguage("gu");
+      } else if (lower.includes("hindi") || lower.includes("hin") || lower.includes("हिंदी") || lower.includes("हाँ") || lower.includes("हैंडी")) {
+        this.setChatLanguage("hi");
+      } else {
+        this.showTyping();
+        setTimeout(() => {
+          this.hideTyping();
+          this.renderMessage("Please select a language from the choices below:\nEnglish, Gujarati, or Hindi.\n\nકૃપા કરીને નીચે આપેલા વિકલ્પોમાંથી ભાષા પસંદ કરો:\nEnglish, Gujarati, અથવા Hindi.\n\nकृपया नीचे दिए गए विकल्पों में से भाषा चुनें:\nEnglish, Gujarati, या Hindi.", "assistant");
+        }, 300);
+      }
       return;
     }
 
@@ -4624,6 +4674,26 @@ class CareMateAI {
     const existingReminder = document.getElementById(`reminder-box-${appt.id}`);
     if (existingReminder) return;
 
+    let headerText = "Upcoming Appointment Alert";
+    let contentText = `You have an upcoming consultation booked with <strong>Dr. ${appt.doctorName}</strong> scheduled for <strong>${appt.date}</strong> at <strong>${appt.slot || appt.time}</strong>.`;
+    let btnOkText = "Confirm/View";
+    let btnReschText = "Reschedule";
+    let btnCancText = "Cancel Slot";
+
+    if (this.lang === "gu") {
+      headerText = "આગામી એપોઇન્ટમેન્ટ સૂચના";
+      contentText = `તમારી <strong>ડૉ. ${appt.doctorName}</strong> સાથેની આગામી એપોઇન્ટમેન્ટ <strong>${appt.date}</strong> ના રોજ <strong>${appt.slot || appt.time}</strong> વાગ્યે શેડ્યૂલ કરેલી છે.`;
+      btnOkText = "પુષ્ટિ કરો/જુઓ";
+      btnReschText = "ફરીથી શેડ્યૂલ કરો";
+      btnCancText = "સ્લોટ રદ કરો";
+    } else if (this.lang === "hi") {
+      headerText = "आगामी अपॉइंटमेंट अलर्ट";
+      contentText = `आपकी <strong>डॉ. ${appt.doctorName}</strong> के साथ आगामी अपॉइंटमेंट <strong>${appt.date}</strong> को <strong>${appt.slot || appt.time}</strong> बजे निर्धारित है।`;
+      btnOkText = "पुष्टि करें / देखें";
+      btnReschText = "पुनर्निर्धारित करें";
+      btnCancText = "अपॉइंटमेंट रद्द करें";
+    }
+
     this.showTyping();
     setTimeout(() => {
       this.hideTyping();
@@ -4634,37 +4704,46 @@ class CareMateAI {
       reminderCard.innerHTML = `
         <div class="caremate-reminder-header">
           <i class="fa-solid fa-bell-ring fa-bounce"></i>
-          <span>Upcoming Appointment Alert</span>
+          <span>${headerText}</span>
         </div>
         <div class="caremate-reminder-content">
-          You have an upcoming consultation booked with <strong>Dr. ${appt.doctorName}</strong> scheduled for <strong>${appt.date}</strong> at <strong>${appt.slot || appt.time}</strong>.
+          ${contentText}
         </div>
         <div class="caremate-reminder-actions">
           <button class="caremate-reminder-btn primary" id="rem-ok-${appt.id}">
-            Confirm/View
+            ${btnOkText}
           </button>
           <button class="caremate-reminder-btn secondary" id="rem-resch-${appt.id}">
-            Reschedule
+            ${btnReschText}
           </button>
           <button class="caremate-reminder-btn danger" id="rem-canc-${appt.id}">
-            Cancel Slot
+            ${btnCancText}
           </button>
         </div>
       `;
 
       reminderCard.querySelector(`#rem-ok-${appt.id}`).addEventListener("click", () => {
-        this.renderMessage("Confirm Appointment", "user");
-        this.renderMessage(`Your appointment for ${appt.date} is confirmed. We look forward to seeing you.`, "assistant");
+        const confirmUser = this.lang === "gu" ? "એપોઇન્ટમેન્ટ પુષ્ટિ કરો" : (this.lang === "hi" ? "अपॉइंटमेंट की पुष्टि करें" : "Confirm Appointment");
+        const confirmAssistant = this.lang === "gu" 
+          ? `${appt.date} ના રોજ તમારી એપોઇન્ટમેન્ટ પુષ્ટિ થયેલ છે. અમે તમને મળવાની રાહ જોઈ રહ્યા છીએ.`
+          : (this.lang === "hi" 
+            ? `${appt.date} को आपकी अपॉइंटमेंट की पुष्टि हो गई है। हम आपसे मिलने के लिए उत्सुक हैं।`
+            : `Your appointment for ${appt.date} is confirmed. We look forward to seeing you.`);
+
+        this.renderMessage(confirmUser, "user");
+        this.renderMessage(confirmAssistant, "assistant");
         this.showMenu();
       });
 
       reminderCard.querySelector(`#rem-resch-${appt.id}`).addEventListener("click", () => {
-        this.renderMessage("Reschedule Appointment Reminder", "user");
+        const reschMsg = this.lang === "gu" ? "એપોઇન્ટમેન્ટ ફરીથી શેડ્યૂલ કરો" : (this.lang === "hi" ? "अपॉइंटमेंट पुनर्निर्धारित करें" : "Reschedule Appointment Reminder");
+        this.renderMessage(reschMsg, "user");
         this.promptRescheduleSlots(appt);
       });
 
       reminderCard.querySelector(`#rem-canc-${appt.id}`).addEventListener("click", () => {
-        this.renderMessage("Cancel Appointment Reminder", "user");
+        const cancelMsg = this.lang === "gu" ? "એપોઇન્ટમેન્ટ રદ કરો" : (this.lang === "hi" ? "अपॉइंटमेंट रद्द करें" : "Cancel Appointment Reminder");
+        this.renderMessage(cancelMsg, "user");
         this.executeCancellation(appt);
       });
 
@@ -4673,7 +4752,12 @@ class CareMateAI {
   }
 
   startDirectionsQuery() {
-    this.renderMessage("Which department or area in Palanpur Health Hub are you trying to locate?");
+    const promptMsg = this.lang === "gu" 
+      ? "તમે પાલનપુર હેલ્થ હબમાં કયા વિભાગ અથવા વિસ્તારને શોધવાનો પ્રયાસ કરી રહ્યાં છો?"
+      : (this.lang === "hi" 
+        ? "आप पालनपुर हेल्थ हब में किस विभाग या क्षेत्र का पता लगाने का प्रयास कर रहे हैं?" 
+        : "Which department or area in Palanpur Health Hub are you trying to locate?");
+    this.renderMessage(promptMsg);
     this.suggestionsContainer.innerHTML = "";
     const facilities = ["General Medicine", "Cardiology", "Neurology", "Pulmonology", "Orthopedics", "ICU", "Emergency", "Pharmacy"];
     facilities.forEach(fac => {
