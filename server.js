@@ -748,7 +748,31 @@ app.post('/api/auth/patient-register', async (req, res) => {
     if (emailVal) {
       const emailCheck = await pool.query('SELECT * FROM patients WHERE LOWER(email) = $1 LIMIT 1', [emailVal]);
       if (emailCheck.rows.length > 0) {
-        return res.status(400).json({ success: false, message: 'A patient with this email is already registered.' });
+        const existingPatient = emailCheck.rows[0];
+        // If they were auto-registered as a Guest, update their name and details
+        if (existingPatient.name === 'Guest Patient' || !existingPatient.name) {
+          const updateResult = await pool.query(
+            `UPDATE patients 
+             SET name = $1, phone = COALESCE(phone, $2)
+             WHERE id = $3
+             RETURNING *`,
+            [name.trim(), phoneVal || null, existingPatient.id]
+          );
+          const updatedPatient = updateResult.rows[0];
+          return res.json({
+            success: true,
+            message: 'Patient profile updated and logged in successfully.',
+            user: {
+              id: updatedPatient.id.toString(),
+              name: updatedPatient.name,
+              email: updatedPatient.email || '',
+              phone: updatedPatient.phone || '',
+              role: 'patient'
+            }
+          });
+        } else {
+          return res.status(400).json({ success: false, message: 'A patient with this email is already registered.' });
+        }
       }
     }
 
@@ -756,7 +780,31 @@ app.post('/api/auth/patient-register', async (req, res) => {
     if (normPhone) {
       const phoneCheck = await pool.query('SELECT * FROM patients WHERE phone LIKE $1 LIMIT 1', [`%${normPhone}`]);
       if (phoneCheck.rows.length > 0) {
-        return res.status(400).json({ success: false, message: 'A patient with this mobile number is already registered.' });
+        const existingPatient = phoneCheck.rows[0];
+        // If they were auto-registered as a Guest, update their name and details
+        if (existingPatient.name === 'Guest Patient' || !existingPatient.name) {
+          const updateResult = await pool.query(
+            `UPDATE patients 
+             SET name = $1, email = COALESCE(email, $2)
+             WHERE id = $3
+             RETURNING *`,
+            [name.trim(), emailVal || null, existingPatient.id]
+          );
+          const updatedPatient = updateResult.rows[0];
+          return res.json({
+            success: true,
+            message: 'Patient profile updated and logged in successfully.',
+            user: {
+              id: updatedPatient.id.toString(),
+              name: updatedPatient.name,
+              email: updatedPatient.email || '',
+              phone: updatedPatient.phone || '',
+              role: 'patient'
+            }
+          });
+        } else {
+          return res.status(400).json({ success: false, message: 'A patient with this mobile number is already registered.' });
+        }
       }
     }
 
