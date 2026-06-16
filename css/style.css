@@ -315,7 +315,7 @@ a {
 }
 
 .loader-logo {
-  font-size: 2.2rem;
+  font-size: 2.0rem;
   font-weight: 800;
   color: var(--primary);
   margin-bottom: 20px;
@@ -332,8 +332,17 @@ a {
   line-height: 1.15;
 }
 
+.loader-welcome {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: none;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
 .loader-line-1 {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -341,7 +350,7 @@ a {
 }
 
 .loader-line-2 {
-  font-size: 2.2rem;
+  font-size: 2.0rem;
   font-weight: 800;
   background: var(--grad-primary);
   -webkit-background-clip: text;
@@ -350,7 +359,7 @@ a {
 }
 
 .loader-line-3 {
-  font-size: 2.2rem;
+  font-size: 2.0rem;
   font-weight: 800;
   background: var(--grad-primary);
   -webkit-background-clip: text;
@@ -359,7 +368,7 @@ a {
 
 .loader-logo i {
   animation: pulse-glow 1.5s infinite ease-in-out;
-  font-size: 2.4rem;
+  font-size: 2.2rem;
 }
 
 .loader-spinner {
@@ -4335,12 +4344,16 @@ body.chatbot-open {
   .loader-logo {
     gap: 10px !important;
   }
+  .loader-welcome {
+    font-size: 0.7rem !important;
+    letter-spacing: 0.5px !important;
+  }
   .loader-line-1 {
-    font-size: 0.75rem !important;
+    font-size: 0.7rem !important;
     letter-spacing: 1.5px !important;
   }
   .loader-line-2, .loader-line-3 {
-    font-size: 1.5rem !important;
+    font-size: 1.35rem !important;
   }
   #chatbot-container, .chatbot-messages {
     overscroll-behavior: contain;
