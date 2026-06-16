@@ -3262,9 +3262,9 @@ select option {
     width: calc(100vw - 24px);
     right: 12px;
     left: 12px;
-    bottom: 95px;
-    height: 580px;
-    max-height: calc(100vh - 120px);
+    bottom: 15px;
+    height: calc(100vh - 30px);
+    max-height: calc(100vh - 30px);
     border-radius: 22px;
   }
   #floating-lang-trigger {

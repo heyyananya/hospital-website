@@ -2861,7 +2861,7 @@ class CareMateAI {
 
     this.translations = {
       en: {
-        welcome: "👋 Welcome to **CareMate AI**\\n*Your Intelligent Healthcare Companion*\\n\\nI can help you analyze symptoms, schedule appointments, search specialists, and calculate health stats. How can I help you today?",
+        welcome: "👋 Welcome to **CareMate AI**\n*Your Intelligent Healthcare Companion*\n\nI can help you analyze symptoms, schedule appointments, search specialists, and calculate health stats. How can I help you today?",
         placeholder: "Type a symptom, question, or task...",
         btn_triage: "🔍 Analyze Symptoms",
         btn_find: "👨‍⚕️ Find Doctors",
@@ -2941,6 +2941,10 @@ class CareMateAI {
       this.container.classList.remove("hidden-chatbot");
       this.fab.classList.remove("chatbot-fab-pulse");
       
+      const langTrigger = document.getElementById("floating-lang-trigger");
+      if (langTrigger) langTrigger.style.display = "none";
+      if (this.fab) this.fab.style.display = "none";
+
       if (this.messagesContainer.children.length === 0) {
         this.showGreeting();
       }
@@ -2948,6 +2952,10 @@ class CareMateAI {
       this.checkForPendingReviews();
     } else {
       this.container.classList.add("hidden-chatbot");
+      
+      const langTrigger = document.getElementById("floating-lang-trigger");
+      if (langTrigger) langTrigger.style.display = "flex";
+      if (this.fab) this.fab.style.display = "flex";
     }
   }
 
@@ -3000,8 +3008,6 @@ class CareMateAI {
     row.appendChild(indicator);
     this.messagesContainer.appendChild(row);
     this.scrollToBottom();
-    const textContent = type === "text" ? content : (content.innerHTML || content.textContent || "");
-    this.history.push({ sender, content: textContent });
   }
 
   hideTyping() {
@@ -3038,6 +3044,8 @@ class CareMateAI {
     row.appendChild(bubble);
     this.messagesContainer.appendChild(row);
     this.scrollToBottom();
+    const textContent = type === "text" ? content : (content.innerHTML || content.textContent || "");
+    this.history.push({ sender, content: textContent });
   }
 
   scrollToBottom() {
@@ -3539,6 +3547,9 @@ class CareMateAI {
   }
 
   handleUserInput(text) {
+    if (this.inputField) {
+      this.inputField.value = "";
+    }
     this.renderMessage(text, "user");
 
     const detectedLang = this.detectLanguage(text);
