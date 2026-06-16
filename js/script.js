@@ -2940,6 +2940,13 @@ class CareMateAI {
     if (shouldOpen) {
       this.container.classList.remove("hidden-chatbot");
       this.fab.classList.remove("chatbot-fab-pulse");
+      
+      // Lock background scrolling on mobile robustly
+      this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${this.scrollPosition}px`;
+      document.body.style.width = '100%';
       document.body.classList.add("chatbot-open");
       
       const langTrigger = document.getElementById("floating-lang-trigger");
@@ -2953,7 +2960,16 @@ class CareMateAI {
       this.checkForPendingReviews();
     } else {
       this.container.classList.add("hidden-chatbot");
+      
+      // Restore background scroll position and release lock
+      document.body.style.removeProperty('overflow');
+      document.body.style.removeProperty('position');
+      document.body.style.removeProperty('top');
+      document.body.style.removeProperty('width');
       document.body.classList.remove("chatbot-open");
+      if (this.scrollPosition !== undefined) {
+        window.scrollTo(0, this.scrollPosition);
+      }
       
       const langTrigger = document.getElementById("floating-lang-trigger");
       if (langTrigger) langTrigger.style.display = "flex";
