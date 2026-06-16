@@ -2953,9 +2953,12 @@ class CareMateAI {
       if (langTrigger) langTrigger.style.display = "none";
       if (this.fab) this.fab.style.display = "none";
 
-      if (this.messagesContainer.children.length === 0) {
-        this.showGreeting();
-      }
+      // Always empty the chatbot and ask for language on open
+      this.messagesContainer.innerHTML = "";
+      this.suggestionsContainer.innerHTML = "";
+      this.history = [];
+      this.flowData = {};
+      this.askForLanguageSelection();
       this.checkUpcomingAppointments();
       this.checkForPendingReviews();
     } else {
@@ -2975,6 +2978,50 @@ class CareMateAI {
       if (langTrigger) langTrigger.style.display = "flex";
       if (this.fab) this.fab.style.display = "flex";
     }
+  }
+
+  askForLanguageSelection() {
+    this.state = "language_selection";
+    
+    // Render the language prompt
+    const promptMessage = "Please select your preferred language:\n\nકૃપા કરીને તમારી પસંદગીની ભાષા પસંદ કરો:\n\nकृपया अपनी पसंदीदा भाषा चुनें:";
+    this.renderMessage(promptMessage, "assistant");
+    
+    // Display language chips as suggestions
+    this.suggestionsContainer.innerHTML = "";
+    
+    const languages = [
+      { text: "English", code: "en" },
+      { text: "ગુજરાતી (Gujarati)", code: "gu" },
+      { text: "हिंदी (Hindi)", code: "hi" }
+    ];
+    
+    languages.forEach(langOption => {
+      const btn = document.createElement("button");
+      btn.className = "chatbot-chip-btn";
+      btn.textContent = langOption.text;
+      btn.addEventListener("click", () => {
+        // User selected a language
+        this.renderMessage(langOption.text, "user");
+        this.state = "idle";
+        
+        // Load and save the selected language
+        this.lang = langOption.code;
+        localStorage.setItem("phh_lang", langOption.code);
+        if (typeof setLanguage === "function") {
+          setLanguage(langOption.code);
+        }
+        this.loadLanguage(langOption.code);
+        
+        // Trigger a custom local storage sync event if needed
+        window.dispatchEvent(new Event("storage_local"));
+        
+        // Show welcome greeting and suggestions menu
+        this.suggestionsContainer.innerHTML = "";
+        this.showGreeting();
+      });
+      this.suggestionsContainer.appendChild(btn);
+    });
   }
 
   showGreeting() {
@@ -3661,13 +3708,6 @@ class CareMateAI {
       this.inputField.value = "";
     }
     this.renderMessage(text, "user");
-
-    const detectedLang = this.detectLanguage(text);
-    if (detectedLang !== this.lang) {
-      this.loadLanguage(detectedLang);
-      localStorage.setItem("phh_lang", detectedLang);
-      window.dispatchEvent(new Event("storage_local"));
-    }
 
     if (this.detectEmergency(text)) {
       this.triggerEmergencyMode();
