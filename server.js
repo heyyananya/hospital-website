@@ -378,10 +378,10 @@ app.post('/api/auth/send-otp', async (req, res) => {
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 550px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
           <!-- Top bar with brand background -->
-          <div style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); padding: 30px 20px; text-align: center;">
+          <div style="background: linear-gradient(135deg, #0066FF 0%, #00F0FF 100%); padding: 30px 20px; text-align: center;">
             <img src="cid:hospital_logo" alt="Hospital Logo" style="width: 85px; height: 85px; border-radius: 50%; border: 3px solid #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: block; margin: 0 auto 12px;">
             <h1 style="color: #ffffff; margin: 0; font-size: 1.4rem; font-weight: 700; letter-spacing: 0.5px;">Palanpur Health Hub</h1>
-            <p style="color: #ccfbf1; margin: 4px 0 0; font-size: 0.85rem; font-weight: 500;">Superspeciality Doctors Consultation</p>
+            <p style="color: #e0f2fe; margin: 4px 0 0; font-size: 0.85rem; font-weight: 500;">Superspeciality Doctors Consultation</p>
           </div>
           
           <!-- Email Content Body -->
@@ -390,9 +390,9 @@ app.post('/api/auth/send-otp', async (req, res) => {
             <p style="font-size: 0.95rem; line-height: 1.5; margin: 0 0 25px; color: #475569;">You have requested a secure One-Time Password (OTP) to log in or register at the **Palanpur Health Hub** patient portal.</p>
             
             <!-- OTP Callout Block -->
-            <div style="background-color: #f0fdfa; border: 1px solid #5eead4; border-radius: 8px; padding: 25px; text-align: center; margin: 25px 0;">
-              <span style="display: block; font-size: 0.8rem; font-weight: 700; color: #0d9488; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Your Verification Code</span>
-              <span style="font-size: 36px; font-weight: 800; letter-spacing: 6px; color: #0f766e; font-family: Courier, monospace;">${otp}</span>
+            <div style="background-color: #f0f7ff; border: 1px solid #93c5fd; border-radius: 8px; padding: 25px; text-align: center; margin: 25px 0;">
+              <span style="display: block; font-size: 0.8rem; font-weight: 700; color: #0066FF; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Your Verification Code</span>
+              <span style="font-size: 36px; font-weight: 800; letter-spacing: 6px; color: #0052cc; font-family: Courier, monospace;">${otp}</span>
               <span style="display: block; font-size: 0.85rem; color: #64748b; margin-top: 10px;">Expires in <strong>5 minutes</strong></span>
             </div>
             
@@ -409,7 +409,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
           <!-- Email Footer -->
           <div style="background-color: #f8fafc; border-top: 1px solid #f1f5f9; padding: 20px; text-align: center; font-size: 0.75rem; color: #94a3b8; line-height: 1.5;">
             <p style="margin: 0 0 6px;">Palanpur Health Hub, Palanpur Highway, Gujarat, India</p>
-            <p style="margin: 0 0 10px;">Contact support at <a href="mailto:support@palanpurhealthhub.com" style="color: #0d9488; text-decoration: none;">support@palanpurhealthhub.com</a></p>
+            <p style="margin: 0 0 10px;">Contact support at <a href="mailto:support@palanpurhealthhub.com" style="color: #0066FF; text-decoration: none;">support@palanpurhealthhub.com</a></p>
             <p style="margin: 0; font-size: 0.7rem; color: #cbd5e1;">&copy; 2026 Palanpur Health Hub. Smart Hospital Solutions.</p>
           </div>
         </div>
