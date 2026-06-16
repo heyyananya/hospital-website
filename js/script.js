@@ -2940,6 +2940,7 @@ class CareMateAI {
     if (shouldOpen) {
       this.container.classList.remove("hidden-chatbot");
       this.fab.classList.remove("chatbot-fab-pulse");
+      document.body.classList.add("chatbot-open");
       
       const langTrigger = document.getElementById("floating-lang-trigger");
       if (langTrigger) langTrigger.style.display = "none";
@@ -2952,6 +2953,7 @@ class CareMateAI {
       this.checkForPendingReviews();
     } else {
       this.container.classList.add("hidden-chatbot");
+      document.body.classList.remove("chatbot-open");
       
       const langTrigger = document.getElementById("floating-lang-trigger");
       if (langTrigger) langTrigger.style.display = "flex";

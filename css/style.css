@@ -3139,6 +3139,10 @@ select option {
 
 /* ================= HOSPITAL ASSISTANT CHATBOT STYLING ================= */
 
+body.chatbot-open {
+  overflow: hidden !important;
+}
+
 /* Floating Chat Action Button (FAB) */
 #chatbot-fab {
   position: fixed;
