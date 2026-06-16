@@ -3266,6 +3266,7 @@ select option {
     height: calc(100vh - 30px);
     max-height: calc(100vh - 30px);
     border-radius: 22px;
+    z-index: 1000000 !important;
   }
   #floating-lang-trigger {
     bottom: 25px;
