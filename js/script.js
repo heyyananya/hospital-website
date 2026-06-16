@@ -2796,6 +2796,7 @@ class CareMateAI {
     this.state = "idle"; // idle, triage, booking, reschedule, cancel, review, calc, faq, compare, emergency
     
     this.flowData = {};
+    this.history = [];
     
     this.recognition = null;
     this.isRecording = false;
@@ -2999,6 +3000,8 @@ class CareMateAI {
     row.appendChild(indicator);
     this.messagesContainer.appendChild(row);
     this.scrollToBottom();
+    const textContent = type === "text" ? content : (content.innerHTML || content.textContent || "");
+    this.history.push({ sender, content: textContent });
   }
 
   hideTyping() {
@@ -3154,8 +3157,396 @@ class CareMateAI {
     });
   }
 
+  
+  detectLanguage(text) {
+    let guCount = 0;
+    let hiCount = 0;
+    let enCount = 0;
+    for (let i = 0; i < text.length; i++) {
+      const code = text.charCodeAt(i);
+      if (code >= 2688 && code <= 2815) guCount++;
+      else if (code >= 2304 && code <= 2431) hiCount++;
+      else if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) enCount++;
+    }
+
+    const lower = text.toLowerCase();
+    const hiPhonetic = ["bukhar", "sir dard", "saans", "khansi", "pet dard", "dil", "haddi", "vomit", "vomiting", "vomitting", "ultee", "ulti", "chakkar", "seizure", "unconscious", "khoon", "bleeding", "kamardard", "petdard", "khasi"];
+    const guPhonetic = ["tav", "shvas", "khas", "mathu", "dokh", "daktar", "lohi", "bhan", "bhula", "chakar", "kamardukhvi", "khaso"];
+
+    if (guCount > 0 && guCount >= hiCount) return "gu";
+    if (hiCount > 0 && hiCount > guCount) return "hi";
+
+    if (guPhonetic.some(w => lower.includes(w))) return "gu";
+    if (hiPhonetic.some(w => lower.includes(w))) return "hi";
+
+    return "en";
+  }
+
+  matchDirectDepartment(text) {
+    const raw = text.toLowerCase();
+    const depts = {
+      "Cardiology": ["cardiology", "cardiologist", "heart doctor", "cardio", "હૃદય રોગ", "હૃદયરોગ", "કાર્ડિયોલોજી", "हृदय रोग", "कार्डियोलॉजिस्ट", "हृदय रोग विशेषज्ञ", "heart specialist"],
+      "Pulmonology": ["pulmonology", "pulmonologist", "lung doctor", "lung specialist", "respiratory", "પલ્મોનોલોજી", "ફેફસાના ડૉક્ટર", "પલ્મોનોલોજિસ્ટ", "पल्मोनोलॉजी", "फेफड़ों के डॉक्टर", "पल्मोनोलॉजिस्ट"],
+      "Neurology": ["neurology", "neurologist", "brain doctor", "brain specialist", "nerve doctor", "ન્યુરોલોજી", "મગજના ડૉક્ટર", "ન્યુરોલોજિસ્ટ", "न्यूरोलॉजी", "दिमाग के डॉक्टर", "न्यूरोलॉजिस्ट"],
+      "Orthopedics": ["orthopedics", "orthopaedic", "orthopedist", "bone doctor", "bone specialist", "ઓર્થોપેડિક્સ", "હાડકાના ડૉક્ટર", "ઓર્થોપેડિસ્ટ", "ऑर्थोपेडिक्स", "हड्डी के डॉक्टर", "ऑर्थोपेडिस्ट"],
+      "Gynecology": ["gynecology", "gynecologist", "gynac", "maternity", "prenatal", "pregnancy doctor", "ગાયનેકોલોજી", "સ્ત્રી રોગ", "ગાયનેકોલોજિસ્ટ", "गायनोकोलॉजी", "स्त्री रोग विशेषज्ञ", "गायनेकोलॉजिस्ट"],
+      "Pediatrics": ["pediatrics", "pediatrician", "child doctor", "kids doctor", "baby doctor", "પીડિયાટ્રિક્સ", "બાળરોગ", "પીડિયાટ્રિશિયન", "पीडियाट्रिक्स", "बच्चों के डॉक्टर", "पीडियाट्रिशियन"],
+      "Dermatology": ["dermatology", "dermatologist", "skin doctor", "skin specialist", "ડર્મેટોલોજી", "ચામડીના ડૉક્ટર", "ડર્મેટોલોજિસ્ટ", "डर्मेटोलॉजी", "त्वचा के डॉक्टर", "त्वचा रोग विशेषज्ञ", "डर्मेटोलॉजिस्ट"],
+      "Psychology": ["psychology", "psychologist", "psychiatrist", "mental health", "therapist", "સાયકોલોજી", "માનસિક રોગ", "સાયકોલોજિસ્ટ", "साइकोलॉजी", "मानसिक रोग विशेषज्ञ", "मनोवैज्ञानिक", "साइकोलॉजिस्ट"],
+      "General Medicine": ["general medicine", "general physician", "family doctor", "physician", "gp", "સામાન્ય રોગ", "જનરલ મેડિસિન", "ફિઝિશિયન", "जनरल मेडिसिन", "फिजिशियन", "फैमिली डॉक्टर"]
+    };
+
+    for (const [dept, keywords] of Object.entries(depts)) {
+      if (keywords.some(kw => raw.includes(kw))) {
+        return dept;
+      }
+    }
+    return null;
+  }
+
+  getSymptomScores(text) {
+    const raw = text.toLowerCase();
+    const scores = {
+      Cardiology: 0,
+      Pulmonology: 0,
+      Neurology: 0,
+      Orthopedics: 0,
+      Gynecology: 0,
+      Pediatrics: 0,
+      Dermatology: 0,
+      Psychology: 0,
+      "General Medicine": 0
+    };
+
+    const matches = (keywords) => keywords.filter(kw => raw.includes(kw)).length;
+
+    // Cardiology
+    scores.Cardiology += matches(["chest pain", "heart pain", "palpitations", "chest pressure", "chest tightness", "dil me dard", "chhati me dard", "chhati dukhvi", "છાતીમાં દુખાવો", "હૃદયમાં દુખાવો", "छाती में दर्द", "दिल में दर्द"]) * 3;
+    scores.Cardiology += matches(["shortness of breath", "breathing difficulty", "cannot breathe", "saans", "shvas", "શ્વાસ", "सांस"]) * 1;
+
+    // Pulmonology
+    scores.Pulmonology += matches(["cough", "coughing", "asthma", "wheezing", "coughing blood", "khansi", "khas", "khasi", "ઉધરસ", "ખાંસી", "खांसी", "दमा"]) * 3;
+    scores.Pulmonology += matches(["shortness of breath", "breathing difficulty", "cannot breathe", "saans", "shvas", "શ્વાસ", "सांस"]) * 2;
+    scores.Pulmonology += matches(["fever", "mild fever", "temperature", "bukhar", "tav", "તાવ", "बुखार"]) * 1;
+
+    // Neurology
+    scores.Neurology += matches(["headache", "migraine", "dizziness", "vertigo", "numbness", "seizure", "seizures", "paralysis", "sir dard", "mathu dukhvu", "mathu", "chakkar", "માથાનો દુખાવો", "ચક્કર", "सिरदर्द", "चक्कर"]) * 3;
+
+    // Orthopedics
+    scores.Orthopedics += matches(["fracture", "broken leg", "broken arm", "joint pain", "knee pain", "back pain", "sprain", "fall", "fell", "bone", "haddi", "ghutan", "kamar", "હાડકું", "ઘૂંટણ", "કમર", "ફ્રેક્ચર", "હड્ડી", "घुटना", "कमर", "फ्रैक्चर"]) * 3;
+
+    // Gynecology
+    scores.Gynecology += matches(["pregnancy", "pregnant", "period pain", "menstrual", "periods", "due date", "ovarian", "ગર્ભાવસ્થા", "પિરિયડ્સ", "गर्भावस्था", "पीरियड्स"]) * 3;
+
+    // Pediatrics
+    scores.Pediatrics += matches(["child fever", "kids fever", "baby fever", "toddler", "pediatric", "baccha", "balak", "બાળક", "बच्चा", "बच्चों"]) * 3;
+
+    // Dermatology
+    scores.Dermatology += matches(["rash", "skin", "acne", "pimple", "pimples", "eczema", "itching", "khujli", "chamdi", "ચામડી", "ખંજવાળ", "त्वचा", "खुजली"]) * 3;
+
+    // Psychology
+    scores.Psychology += matches(["anxiety", "stress", "depression", "panic attack", "sleep issues", "sadness", "tension", "ચિંતા", "તણાવ", "चिंता", "तनाव"]) * 3;
+
+    // General Medicine
+    scores["General Medicine"] += matches(["fever", "temperature", "bukhar", "tav", "તાવ", "बुखार"]) * 2;
+    scores["General Medicine"] += matches(["cold", "flu", "sore throat", "throat infection", "stomach ache", "vomiting", "vomit", "nausea", "ultee", "ulti", "શરદી", "ઉલટી", "પેટનો દુખાવો", "जुकाम", "उल्टी", "पेट दर्द"]) * 2;
+
+    return scores;
+  }
+
+  evaluateTriage(text) {
+    this.flowData.symptomHistory = this.flowData.symptomHistory || [];
+    this.flowData.symptomHistory.push(text);
+
+    const concatenatedText = this.flowData.symptomHistory.join(" ");
+    const scores = this.getSymptomScores(concatenatedText);
+
+    const sorted = Object.entries(scores)
+      .filter(([dept, score]) => score > 0)
+      .sort((a, b) => b[1] - a[1]);
+
+    if (sorted.length === 0) {
+      this.handleLowConfidence();
+      return;
+    }
+
+    const topDept = sorted[0][0];
+    const topScore = sorted[0][1];
+    
+    const secondDept = sorted[1] ? sorted[1][0] : null;
+    const secondScore = sorted[1] ? sorted[1][1] : 0;
+
+    let confidence = 0;
+    if (topScore >= 5) {
+      confidence = 95;
+    } else if (topScore >= 3 && secondScore <= 1) {
+      confidence = 90;
+    } else if (topScore >= 3 && secondScore >= 2) {
+      confidence = 75;
+    } else if (topScore === 2 && secondScore === 0) {
+      confidence = 70;
+    } else if (topScore === 2 && secondScore === 1) {
+      confidence = 65;
+    } else {
+      confidence = 50;
+    }
+
+    if (confidence > 85) {
+      this.recommendDepartment(topDept);
+    } else if (confidence >= 60) {
+      this.promptClarifyingQuestion(topDept, secondDept);
+    } else {
+      this.handleMultiplePossibilities(sorted);
+    }
+  }
+
+  recommendDepartment(dept) {
+    let urgency = "low";
+    let advice = "Rest, stay hydrated, and consult a physician if symptoms persist.";
+    
+    if (dept === "Cardiology") {
+      urgency = "emergency";
+      advice = "Consult a cardiologist immediately. Go to the nearest Emergency room if pain radiates.";
+    } else if (dept === "Pulmonology") {
+      urgency = "high";
+      advice = "Consult our Pulmonologist. Seek immediate care if experiencing breathing struggles.";
+    } else if (dept === "Orthopedics") {
+      urgency = "medium";
+      advice = "Avoid putting weight on the affected limb. Consult an orthopedic specialist.";
+    } else if (dept === "Pediatrics") {
+      urgency = "high";
+      advice = "Monitor child temperature. Consult our specialist pediatrician within 12 hours.";
+    } else if (dept === "Neurology") {
+      urgency = "medium";
+      advice = "Keep in a dark, quiet room. Consult a neurologist if headaches are recurring.";
+    } else if (dept === "Gynecology") {
+      urgency = "medium";
+      advice = "Consult a gynecologist to discuss maternal/pregnancy care steps.";
+    } else if (dept === "Dermatology") {
+      urgency = "low";
+      advice = "Avoid scratching or applying unverified creams. Consult a dermatologist.";
+    } else if (dept === "Psychology") {
+      urgency = "low";
+      advice = "Practice slow deep breathing. Consider booking a session with our clinical psychologist.";
+    }
+
+    if (this.lang === "gu") {
+      if (dept === "Cardiology") advice = "તાત્કાલિક કાર્ડિયોલોજિસ્ટનો સંપર્ક કરો. જો દુખાવો ફેલાય તો નજીકના ઇમરજન્સી રૂમમાં જાઓ.";
+      else if (dept === "Pulmonology") advice = "અમારા પલ્મોનોલોજિસ્ટની સલાહ લો. જો શ્વાસ લેવામાં તકલીફ થાય તો તાત્કાલિક સારવાર લો.";
+      else if (dept === "Orthopedics") advice = "અસરગ્રસ્ત અંગ પર વજન મૂકવાનું ટાળો. ઓર્થોપેડિક નિષ્ણાતની સલાહ લો.";
+      else if (dept === "General Medicine") advice = "આરામ કરો, હાઇડ્રેટેડ રહો અને જો લક્ષણો યથાવત રહે તો ચિકિત્સકની સલાહ લો.";
+    } else if (this.lang === "hi") {
+      if (dept === "Cardiology") advice = "तुरंत हृदय रोग विशेषज्ञ से संपर्क करें। यदि दर्द बढ़े तो नजदीकी आपातकालीन कक्ष में जाएं।";
+      else if (dept === "Pulmonology") advice = "हमारे पल्मोनोलॉजिस्ट से परामर्श लें। सांस लेने में कठिनाई होने पर तुरंत देखभाल करें।";
+      else if (dept === "Orthopedics") advice = "प्रभावित अंग पर वजन डालने से बचें। ऑर्थोपेडिक विशेषज्ञ से सलाह लें।";
+      else if (dept === "General Medicine") advice = "आराम करें, हाइड्रेटेड रहें और लक्षण बने रहने पर चिकित्सक से परामर्श लें।";
+    }
+
+    const badgeHtml = `<span class="caremate-urgency-badge ${urgency}">${urgency} urgency</span>`;
+    
+    let explanationMsg = "";
+    if (this.lang === "gu") {
+      explanationMsg = `તમે વર્ણવેલ લક્ષણોના આધારે, અમારા **${dept}** વિભાગ સાથે પરામર્શ કરવો એ સૌથી યોગ્ય આગલું પગલું હશે. તેઓ તમારી ચિંતાઓ સંબંધિત પરિસ્થિતિઓની સારવારમાં નિષ્ણાત છે.`;
+    } else if (this.lang === "hi") {
+      explanationMsg = `आपके बताए गए लक्षणों के आधार पर, हमारे **${dept}** विभाग के साथ परामर्श करना सबसे उपयुक्त अगला कदम होगा। वे आपकी चिंताओं से संबंधित स्थितियों के इलाज में विशेषज्ञ हैं।`;
+    } else {
+      explanationMsg = `Based on the symptoms you've described, a consultation with our **${dept}** department would be the most appropriate next step. They specialize in treating conditions related to your concerns.`;
+    }
+
+    const summaryMsg = `
+      ${explanationMsg}<br><br>
+      • Triage Level: ${badgeHtml}<br>
+      • Recommended Steps: <em>${advice}</em>
+    `;
+    this.renderMessage(summaryMsg);
+    this.rankDoctors(dept);
+
+    this.flowData.symptomHistory = [];
+  }
+
+  promptClarifyingQuestion(topDept, secondDept) {
+    this.state = "clarifying";
+    
+    let questionText = "";
+    if (topDept === "Cardiology" || secondDept === "Cardiology" || topDept === "Pulmonology" || secondDept === "Pulmonology") {
+      this.flowData.clarifyingType = "cardio_pulmo";
+      if (this.lang === "gu") {
+        questionText = "હું સમજી શકું છું. શ્વાસ લેવામાં તકલીફની સાથે, શું તમને છાતીમાં કોઈ દુખાવો અથવા ધબકારા પણ અનુભવાય છે?";
+      } else if (this.lang === "hi") {
+        questionText = "मैं समझ सकता हूँ। सांस लेने में तकलीफ के साथ, क्या आपको छाती में कोई दर्द या घबराहट भी महसूस हो रही है?";
+      } else {
+        questionText = "I see. Along with your breathing difficulty, do you also experience any chest pain or palpitations?";
+      }
+    } else if (topDept === "Neurology" || secondDept === "Neurology") {
+      this.flowData.clarifyingType = "neuro_general";
+      if (this.lang === "gu") {
+        questionText = "શું તમને માથાના દુખાવાની સાથે ચક્કર આવવા, ઉલટી અથવા હાથ-પગમાં સુન્નતા અનુભવાય છે?";
+      } else if (this.lang === "hi") {
+        questionText = "क्या आपको सिरदर्द के साथ चक्कर आना, उल्टी या हाथ-पैर सुन्न होना महसूस हो रहा है?";
+      } else {
+        questionText = "Are you experiencing any dizziness, vomiting, or numbness along with the headache?";
+      }
+    } else if (topDept === "Orthopedics" || secondDept === "Orthopedics") {
+      this.flowData.clarifyingType = "ortho_general";
+      if (this.lang === "gu") {
+        questionText = "શું તમને તાજેતરમાં કોઈ ઈજા થઈ છે, પછડાટ લાગી છે અથવા સાંધામાં સોજો આવી ગયો છે?";
+      } else if (this.lang === "hi") {
+        questionText = "क्या आपको हाल ही में कोई चोट लगी है, गिरावट आई है या जोड़ों में सूजन है?";
+      } else {
+        questionText = "Did you recently experience a fall, injury, or joint swelling?";
+      }
+    } else {
+      this.flowData.clarifyingType = "generic";
+      if (this.lang === "gu") {
+        questionText = "શું તમે સ્પષ્ટ કરી શકો કે શું તમને તાવ, ઉધરસ અથવા શરીરના કોઈ ચોક્કસ ભાગમાં દુખાવો જેવા લક્ષણો પણ છે?";
+      } else if (this.lang === "hi") {
+        questionText = "क्या आप बता सकते हैं कि क्या आपको बुखार, खांसी, या शरीर के किसी हिस्से में दर्द जैसे लक्षण भी हैं?";
+      } else {
+        questionText = "Could you please specify if you also have symptoms like fever, cough, or pain in any specific part of your body?";
+      }
+    }
+
+    this.renderMessage(questionText);
+    
+    this.suggestionsContainer.innerHTML = "";
+    const yesText = this.lang === "gu" ? "હા" : (this.lang === "hi" ? "हाँ" : "Yes");
+    const noText = this.lang === "gu" ? "ના" : (this.lang === "hi" ? "नहीं" : "No");
+
+    const yesChip = document.createElement("button");
+    yesChip.className = "chatbot-chip";
+    yesChip.textContent = yesText;
+    yesChip.addEventListener("click", () => {
+      this.handleUserInput(yesText);
+    });
+
+    const noChip = document.createElement("button");
+    noChip.className = "chatbot-chip";
+    noChip.textContent = noText;
+    noChip.addEventListener("click", () => {
+      this.handleUserInput(noText);
+    });
+
+    this.suggestionsContainer.appendChild(yesChip);
+    this.suggestionsContainer.appendChild(noChip);
+  }
+
+  handleClarifyingResponse(text) {
+    const raw = text.toLowerCase();
+    const isAffirmative = ["yes", "ha", "haan", "y", "sure", "haji", "ji", "haji", "ha ", "thodu", "sanam", "agree", "correct", "true", "severe", "mild"].some(w => raw.includes(w));
+    
+    this.state = "idle";
+    
+    const type = this.flowData.clarifyingType;
+    if (type === "cardio_pulmo") {
+      if (isAffirmative) {
+        this.flowData.symptomHistory.push("chest pain");
+      } else {
+        this.flowData.symptomHistory.push("no chest pain");
+      }
+    } else if (type === "neuro_general") {
+      if (isAffirmative) {
+        this.flowData.symptomHistory.push("dizziness");
+      }
+    } else if (type === "ortho_general") {
+      if (isAffirmative) {
+        this.flowData.symptomHistory.push("injury");
+      }
+    } else {
+      this.flowData.symptomHistory.push(text);
+    }
+
+    const concatenatedText = this.flowData.symptomHistory.join(" ");
+    const scores = this.getSymptomScores(concatenatedText);
+
+    const sorted = Object.entries(scores)
+      .filter(([dept, score]) => score > 0)
+      .sort((a, b) => b[1] - a[1]);
+
+    if (sorted.length > 0) {
+      const topDept = sorted[0][0];
+      this.recommendDepartment(topDept);
+    } else {
+      this.recommendDepartment("General Medicine");
+    }
+  }
+
+  handleMultiplePossibilities(sorted) {
+    const possibilities = sorted.slice(0, 3).map(x => x[0]);
+    
+    let msg = "";
+    if (this.lang === "gu") {
+      msg = `હું તમારા લક્ષણો વિશે સંપૂર્ણ ખાતરીપૂર્વક નથી કહી શકતો. તે નીચેનામાંથી કોઈ એક વિભાગ સાથે સંબંધિત હોઈ શકે છે. કૃપા કરીને વધુ વિગત આપો અથવા નીચેનામાંથી એક પસંદ કરો:`;
+    } else if (this.lang === "hi") {
+      msg = `मैं आपके लक्षणों के बारे में पूरी तरह आश्वस्त नहीं हूँ। यह निम्न विभागों में से किसी एक से संबंधित हो सकता है। कृपया अधिक विवरण दें या नीचे से चुनें:`;
+    } else {
+      msg = `I'm not completely sure which department matches your symptoms best. Based on what you've described, it could relate to one of these:`;
+    }
+
+    this.renderMessage(msg);
+    this.suggestionsContainer.innerHTML = "";
+    possibilities.forEach(dept => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = dept;
+      chip.addEventListener("click", () => {
+        this.renderMessage(dept, "user");
+        this.recommendDepartment(dept);
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  handleLowConfidence() {
+    let msg = "";
+    if (this.lang === "gu") {
+      msg = `હું તમારા વર્ણવેલ લક્ષણો સમજી શક્યો નથી. કૃપા કરીને થોડી વધુ વિગતો આપો, અથવા અમારા જનરલ મેડિસિન ડૉક્ટરની સલાહ લો.`;
+    } else if (this.lang === "hi") {
+      msg = `मैं आपके बताए गए लक्षणों को ठीक से समझ नहीं पाया। कृपया थोड़ा और विवरण दें, या हमारे जनरल मेडिसिन डॉक्टर से सलाह लें।`;
+    } else {
+      msg = `I couldn't clarify your symptoms. Could you please describe what you are feeling in more detail, or would you like to consult our General Medicine team?`;
+    }
+
+    this.renderMessage(msg);
+    this.suggestionsContainer.innerHTML = "";
+    const gmText = this.lang === "gu" ? "જનરલ મેડિસિન ડૉક્ટર" : (this.lang === "hi" ? "जनरल मेडिसिन डॉक्टर" : "General Medicine Doctors");
+    const chip = document.createElement("button");
+    chip.className = "chatbot-chip";
+    chip.textContent = gmText;
+    chip.addEventListener("click", () => {
+      this.renderMessage(gmText, "user");
+      this.recommendDepartment("General Medicine");
+    });
+    this.suggestionsContainer.appendChild(chip);
+  }
+
+  getDoctorExplanation(doc, dept) {
+    const isHighestRating = doc.rating >= 4.8;
+    const isExperienced = parseInt(doc.exp) >= 15;
+    
+    if (this.lang === "gu") {
+      if (isHighestRating) return `ડૉ. ${doc.name} ની ભલામણ કરવામાં આવે છે કારણ કે તેઓ ${dept} માં અમારા સૌથી વધુ રેટિંગ ધરાવતા નિષ્ણાત છે.`;
+      if (isExperienced) return `ડૉ. ${doc.name} ની ભલામણ કરવામાં આવે છે કારણ કે તેઓ આ ક્ષેત્રમાં ${doc.exp} નો વ્યાપક ક્લિનિકલ અનુભવ ધરાવે છે.`;
+      return `ડૉ. ${doc.name} આ ક્ષેત્રમાં સેવા આપવા માટે ઉપલબ્ધ છે.`;
+    } else if (this.lang === "hi") {
+      if (isHighestRating) return `डॉ. ${doc.name} की सिफारिश की जाती है क्योंकि वे ${dept} में हमारे सबसे अधिक रेटिंग वाले विशेषज्ञ हैं.`;
+      if (isExperienced) return `डॉ. ${doc.name} की सिफारिश की जाती है क्योंकि उनके पास इस क्षेत्र में ${doc.exp} का व्यापक नैदानिक अनुभव है.`;
+      return `डॉ. ${doc.name} इस विभाग में सेवा के लिए उपलब्ध हैं.`;
+    } else {
+      if (isHighestRating) return `Dr. ${doc.name} is recommended as they are our highest-rated specialist in ${dept}.`;
+      if (isExperienced) return `Dr. ${doc.name} is recommended because they have ${doc.exp} of extensive clinical experience in this field.`;
+      return `Dr. ${doc.name} is available for consultation in this department.`;
+    }
+  }
+
   handleUserInput(text) {
     this.renderMessage(text, "user");
+
+    const detectedLang = this.detectLanguage(text);
+    if (detectedLang !== this.lang) {
+      this.loadLanguage(detectedLang);
+      localStorage.setItem("phh_lang", detectedLang);
+      window.dispatchEvent(new Event("storage_local"));
+    }
 
     if (this.detectEmergency(text)) {
       this.triggerEmergencyMode();
@@ -3200,16 +3591,29 @@ class CareMateAI {
       this.handleBookingSymptoms(text);
     } else if (this.state === "triage_input") {
       this.handleTriageInput(text);
+    } else if (this.state === "clarifying") {
+      this.handleClarifyingResponse(text);
     } else {
       this.showTyping();
       setTimeout(() => {
         this.hideTyping();
+
+        const directDept = this.matchDirectDepartment(text);
+        if (directDept) {
+          const directRecMsg = this.lang === 'gu'
+            ? `તમારી વિનંતી મુજબ, હું તમને અમારા **${directDept}** વિભાગ પર લઈ જઈ રહ્યો છું. અહીં અમારા ઉપલબ્ધ ડૉક્ટરો છે:`
+            : (this.lang === 'hi' ? `आपके अनुरोध के अनुसार, मैं आपको हमारे **${directDept}** विभाग में ले जा रहा हूँ। यहाँ हमारे उपलब्ध डॉक्टर हैं:` : `As requested, displaying specialists in our **${directDept}** department:`);
+          this.renderMessage(directRecMsg);
+          this.rankDoctors(directDept);
+          return;
+        }
+
         const matchedFaq = this.matchFaqText(text);
         if (matchedFaq) {
           this.renderMessage(matchedFaq);
           this.showMenu();
         } else {
-          this.executeTriageOnText(text);
+          this.evaluateTriage(text);
         }
       }, 500);
     }
@@ -3226,7 +3630,8 @@ class CareMateAI {
     this.showTyping();
     setTimeout(() => {
       this.hideTyping();
-      this.executeTriageOnText(text);
+      this.state = "idle";
+      this.evaluateTriage(text);
     }, 600);
   }
 
