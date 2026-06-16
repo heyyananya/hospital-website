@@ -4296,34 +4296,16 @@ body.chatbot-open {
   max-width: 100% !important;
 }
 
-/* Center Navbar Logo on Mobile and prevent menu overlap */
+/* Center Loading Screen logo/branding on mobile */
 @media (max-width: 768px) {
-  .nav-container {
-    position: relative;
-    display: flex;
-    justify-content: flex-end;
-  }
-  .logo {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 10;
+  .loader-logo {
+    font-size: 1.3rem !important;
+    flex-direction: column !important;
+    text-align: center !important;
+    gap: 8px !important;
   }
   #chatbot-container, .chatbot-messages {
     overscroll-behavior: contain;
-  }
-}
-
-@media (max-width: 480px) {
-  .logo-text .logo-top {
-    font-size: 0.58rem !important;
-    letter-spacing: 0.5px !important;
-  }
-  .logo-text .logo-accent {
-    font-size: 0.85rem !important;
-  }
-  .logo-icon {
-    font-size: 1.4rem !important;
   }
 }
 
