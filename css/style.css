@@ -367,8 +367,13 @@ a {
 }
 
 .loader-logo i {
-  animation: pulse-glow 1.5s infinite ease-in-out;
-  font-size: 2.2rem;
+  animation: loader-heartbeat 1.4s infinite ease-in-out;
+  font-size: 3.8rem;
+  background: var(--grad-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+  margin-bottom: 5px;
 }
 
 .loader-spinner {
@@ -382,6 +387,14 @@ a {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@keyframes loader-heartbeat {
+  0% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(0, 102, 255, 0.4)); }
+  14% { transform: scale(1.22); filter: drop-shadow(0 0 18px rgba(0, 102, 255, 0.8)); }
+  28% { transform: scale(1.08); filter: drop-shadow(0 0 10px rgba(0, 102, 255, 0.6)); }
+  42% { transform: scale(1.32); filter: drop-shadow(0 0 25px rgba(0, 102, 255, 0.95)); }
+  70% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(0, 102, 255, 0.4)); }
 }
 
 @keyframes pulse-glow {
@@ -4343,6 +4356,9 @@ body.chatbot-open {
 @media (max-width: 768px) {
   .loader-logo {
     gap: 10px !important;
+  }
+  .loader-logo i {
+    font-size: 2.8rem !important;
   }
   .loader-welcome {
     font-size: 0.7rem !important;
