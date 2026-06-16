@@ -3976,6 +3976,308 @@ select option {
   transform: scale(0.95);
 }
 
+/* ================== CAREMATE AI SPECIALIZED UI COMPONENT OVERRIDES ================== */
+
+/* Urgency Level Badges */
+.caremate-urgency-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.caremate-urgency-badge.low {
+  background: rgba(241, 245, 249, 0.85);
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+.caremate-urgency-badge.medium {
+  background: rgba(254, 243, 199, 0.9);
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.caremate-urgency-badge.high {
+  background: rgba(255, 237, 213, 0.9);
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+.caremate-urgency-badge.emergency {
+  background: rgba(254, 226, 226, 0.95);
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  animation: caremate-pulse-red 1.5s infinite;
+}
+
+@keyframes caremate-pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+
+/* CareMate Comparison Card Widget */
+.caremate-compare-widget {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 102, 255, 0.15);
+  border-radius: 16px;
+  padding: 14px;
+  margin: 10px 0;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+}
+.caremate-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+.caremate-compare-column {
+  background: rgba(248, 250, 252, 0.6);
+  border-radius: 12px;
+  padding: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.caremate-compare-column.recommended {
+  border-color: var(--primary);
+  background: rgba(0, 102, 255, 0.03);
+}
+.caremate-compare-recommend-tag {
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.62rem;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+.caremate-compare-heading {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+.caremate-compare-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(226, 232, 240, 0.6);
+}
+.caremate-compare-row:last-child {
+  border-bottom: none;
+}
+.caremate-compare-label {
+  color: #64748b;
+}
+.caremate-compare-value {
+  font-weight: 600;
+  color: #334155;
+}
+
+/* Star Feedback Widget */
+.caremate-feedback-card {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 102, 255, 0.15);
+  border-radius: 16px;
+  padding: 14px;
+  text-align: center;
+}
+.caremate-stars-wrapper {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+.caremate-star-btn {
+  font-size: 1.5rem;
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: transform 0.2s ease, color 0.2s ease;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.caremate-star-btn.active {
+  color: #fbbf24;
+}
+.caremate-star-btn:hover {
+  transform: scale(1.2);
+}
+.caremate-feedback-textarea {
+  width: 100%;
+  height: 60px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  padding: 8px;
+  font-size: 0.8rem;
+  resize: none;
+  margin-top: 8px;
+  outline: none;
+  background: #f8fafc;
+  transition: border-color 0.2s ease;
+}
+.caremate-feedback-textarea:focus {
+  border-color: var(--primary);
+  background: #fff;
+}
+.caremate-feedback-submit {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.caremate-feedback-submit:hover {
+  opacity: 0.9;
+}
+
+/* Conversational Calculator Forms */
+.caremate-calc-wrapper {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 102, 255, 0.1);
+  border-radius: 16px;
+  padding: 12px;
+  margin-top: 8px;
+}
+.caremate-calc-field {
+  margin-bottom: 8px;
+}
+.caremate-calc-field label {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.caremate-calc-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.8rem;
+  background: #f8fafc;
+  outline: none;
+}
+.caremate-calc-input:focus {
+  border-color: var(--primary);
+  background: #fff;
+}
+.caremate-calc-submit-btn {
+  width: 100%;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+/* Reminder Alert Box */
+.caremate-reminder-box {
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.9) 0%, rgba(219, 234, 254, 0.8) 100%);
+  border: 1.5px solid rgba(0, 102, 255, 0.2);
+  border-radius: 18px;
+  padding: 14px;
+  margin: 10px 0;
+  box-shadow: 0 4px 15px rgba(0, 102, 255, 0.05);
+}
+.caremate-reminder-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.caremate-reminder-content {
+  font-size: 0.78rem;
+  color: #1e293b;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+.caremate-reminder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.caremate-reminder-btn {
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.caremate-reminder-btn.primary {
+  background: var(--primary);
+  color: white;
+}
+.caremate-reminder-btn.secondary {
+  background: rgba(255, 255, 255, 0.8);
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+.caremate-reminder-btn.danger {
+  background: rgba(254, 226, 226, 0.9);
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+.caremate-reminder-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Speech Wave Pulsing */
+.caremate-speech-active {
+  background: rgba(239, 246, 255, 0.95) !important;
+  color: var(--primary) !important;
+  box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.2) !important;
+  animation: caremate-pulse-blue 1.5s infinite;
+}
+
+@keyframes caremate-pulse-blue {
+  0% { box-shadow: 0 0 0 0 rgba(0, 102, 255, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(0, 102, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 102, 255, 0); }
+}
+
+/* Emergency Overlay Override style */
+.caremate-emergency-mode-card {
+  border: 2px solid #ef4444 !important;
+  background: rgba(254, 242, 242, 0.95) !important;
+  box-shadow: 0 10px 30px rgba(239, 68, 68, 0.15) !important;
+}
+.caremate-emergency-header {
+  background: #ef4444;
+  color: white;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px 8px 0 0;
+  margin: -14px -14px 10px -14px;
+}
+
+
 
 
 

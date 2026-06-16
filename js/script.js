@@ -2181,8 +2181,8 @@ function initHomepage() {
   }
 
   // Initialize chatbot assistant
-  if (typeof AntigravitySmartChatbot !== 'undefined') {
-    window.chatbotInstance = new AntigravitySmartChatbot();
+  if (typeof CareMateAI !== 'undefined') {
+    window.chatbotInstance = new CareMateAI();
     window.chatbotInstance.init();
   }
 }
@@ -2781,7 +2781,7 @@ const HEALTH_TIPS = {
   ]
 };
 
-class AntigravitySmartChatbot {
+class CareMateAI {
   constructor() {
     this.container = document.getElementById("chatbot-container");
     this.fab = document.getElementById("chatbot-fab");
@@ -2790,35 +2790,114 @@ class AntigravitySmartChatbot {
     this.suggestionsContainer = document.getElementById("chat-suggestions");
     this.inputForm = document.getElementById("chatbot-input-form");
     this.inputField = document.getElementById("chatbot-input-field");
-    
+    this.micBtn = document.getElementById("chatbot-mic-btn");
+
     this.lang = localStorage.getItem("phh_lang") || "en";
-    this.state = "idle"; // idle, menu, symptoms, booking, quiz, nav, tips
+    this.state = "idle"; // idle, triage, booking, reschedule, cancel, review, calc, faq, compare, emergency
     
-    // Booking flow state
-    this.booking = {
-      name: "",
-      dept: "",
-      doctor: null,
-      date: "",
-      slot: "",
-      symptoms: ""
-    };
+    this.flowData = {};
     
-    // Quiz state
-    this.quiz = {
-      currentQuestion: 0,
-      score: 0
+    this.recognition = null;
+    this.isRecording = false;
+
+    // Define codepoints translations to bypass backend regex escape bugs
+    const gu_trans = {};
+    const hi_trans = {};
+
+    gu_trans.welcome = String.fromCodePoint(...[128075,32,42,42,67,97,114,101,77,97,116,101,32,65,73,42,42,32,2734,2750,2690,32,2694,2730,2728,2753,2690,32,2744,2765,2741,2750,2711,2724,32,2715,2759,10,42,2724,2734,2750,2736,2750,32,2732,2753,2726,2765,2727,2751,2742,2750,2739,2752,32,2745,2759,2738,2765,2725,2709,2759,2736,32,2744,2750,2725,2752,42,10,10,2745,2753,2690,32,2724,2734,2728,2759,32,2738,2709,2765,2743,2723,2763,2728,2753,2690,32,2741,2751,2742,2765,2738,2759,2743,2723,32,2709,2736,2741,2750,2734,2750,2690,44,32,2703,2730,2763,2695,2728,2765,2719,2734,2759,2728,2765,2719,32,2742,2759,2721,2765,2735,2754,2738,32,2709,2736,2741,2750,2734,2750,2690,44,32,2703,2730,2763,2695,2728,2765,2719,2734,2759,2728,2765,2719,32,2742,2763,2727,2741,2750,2734,2750,2690,32,2693,2728,2759,32,2694,2736,2763,2711,2765,2735,2728,2750,32,2694,2690,2709,2721,2750,32,2711,2723,2741,2750,2734,2750,2690,32,2711,2723,2741,2750,2734,2750,2690,32,2715,2759,63]);
+    gu_trans.placeholder = String.fromCodePoint(...[2738,2709,2765,2743,2723,2763,44,32,2730,2765,2736,2742,2765,2728,32,2693,2725,2741,2750,32,2709,2750,2736,2765,2735,32,2738,2710,2763,46,46,46]);
+    gu_trans.btn_triage = String.fromCodePoint(...[128269,32,2738,2709,2765,2743,2723,32,2741,2751,2742,2765,2738,2759,2743,2723]);
+    gu_trans.btn_find = String.fromCodePoint(...[128104,8205,9877,65039,32,2721,2761,2709,2765,2719,2736,32,2742,2763,2727,2763]);
+    gu_trans.btn_book = String.fromCodePoint(...[128197,32,2703,2730,2763,2695,2728,2765,2719,2734,2759,2728,2765,2719,32,2732,2753,2709,2751,2690,2711]);
+    gu_trans.btn_appt = String.fromCodePoint(...[128203,32,2734,2750,2736,2752,32,2703,2730,2763,2695,2728,2765,2719,2734,2759,2728,2765,2719]);
+    gu_trans.btn_emergency = String.fromCodePoint(...[128680,32,2695,2734,2736,2716,2728,2765,2744,2752,32,2734,2726,2726]);
+    gu_trans.btn_directions = String.fromCodePoint(...[128205,32,2726,2751,2742,2750,45,2728,2751,2736,2765,2726,2759,2742,2763]);
+    gu_trans.btn_compare = String.fromCodePoint(...[9878,65039,32,2721,2761,2709,2765,2719,2736,2763,2728,2752,32,2724,2753,2738,2728,2750]);
+    gu_trans.btn_tools = String.fromCodePoint(...[128161,32,2745,2759,2738,2765,2725,32,2719,2753,2738,2765,2744]);
+    gu_trans.btn_faq = String.fromCodePoint(...[10067,32,2730,2765,2736,2742,2765,2728,2763,32,2730,2754,2715,2763]);
+    gu_trans.emergency_title = String.fromCodePoint(...[128680,32,2709,2719,2763,2709,2719,2752,32,2714,2759,2724,2741,2723,2752,32,2744,2709,2765,2736,2751,2735,32,2725,2696]);
+    gu_trans.emergency_guideline = String.fromCodePoint(...[2711,2690,2733,2752,2736,32,2738,2709,2765,2743,2723,2763,32,2716,2763,2741,2750,32,2734,2739,2765,2735,2750,32,2715,2759,46,32,2709,2755,2730,2750,32,2709,2736,2752,2728,2759,32,2724,2750,2724,2765,2709,2750,2738,2751,2709,32,2724,2732,2752,2732,2752,32,2744,2750,2736,2741,2750,2736,32,2734,2759,2739,2741,2763,46]);
+    gu_trans.emergency_btn = String.fromCodePoint(...[2695,2734,2736,2716,2728,2765,2744,2752,32,2709,2761,2738,32,40,49,48,56,41]);
+    gu_trans.emergency_appt = String.fromCodePoint(...[2724,2765,2741,2736,2751,2724,32,2732,2753,2709,2751,2690,2711]);
+    gu_trans.confirm_appt = String.fromCodePoint(...[2703,2730,2763,2695,2728,2765,2719,2734,2759,2728,2765,2719,32,2742,2759,2721,2765,2735,2754,2738,32,2709,2728,2765,2731,2736,2765,2734,32,2709,2736,2763]);
+    gu_trans.reschedule = String.fromCodePoint(...[2736,2752,2742,2759,2721,2765,2735,2754,2738]);
+    gu_trans.cancel = String.fromCodePoint(...[2736,2726,32,2709,2736,2763]);
+    gu_trans.view_details = String.fromCodePoint(...[2741,2751,2711,2724,2763,32,2716,2753,2707]);
+    gu_trans.ask_feedback = String.fromCodePoint(...[2721,2761,46,32,123,100,111,99,116,111,114,125,32,2744,2750,2725,2759,2728,2750,32,2724,2734,2750,2736,2750,32,2724,2750,2716,2759,2724,2736,2728,2750,32,2693,2728,2753,2733,2741,32,2709,2759,2741,2763,32,2736,2745,2765,2735,2763,63,32,2709,2755,2730,2750,32,2709,2736,2752,2728,2759,32,2736,2759,2719,2751,2690,2711,32,2694,2730,2763,58]);
+    gu_trans.submit_feedback = String.fromCodePoint(...[2730,2765,2736,2724,2751,2744,2750,2726,32,2744,2732,2734,2751,2719,32,2709,2736,2763]);
+    gu_trans.feedback_placeholder = String.fromCodePoint(...[2724,2734,2750,2736,2752,32,2744,2734,2752,2709,2765,2743,2750,32,2693,2745,2752,2690,32,2738,2710,2763,46,46,46]);
+    gu_trans.feedback_success = String.fromCodePoint(...[2694,2733,2750,2736,33,32,2724,2734,2750,2736,2752,32,2744,2734,2752,2709,2765,2743,2750,32,2744,2690,2711,2765,2736,2745,2751,2724,32,2693,2728,2759,32,2744,2751,2690,2709,2765,2736,2728,2750,2695,2717,32,2725,2696,32,2711,2696,32,2715,2759,46]);
+    gu_trans.reschedule_success = String.fromCodePoint(...[2703,2730,2763,2695,2728,2765,2719,2734,2759,2728,2765,2719,32,2744,2731,2739,2724,2750,2730,2754,2736,2765,2741,2709,32,123,100,97,116,101,125,32,2728,2750,32,2736,2763,2716,32,123,116,105,109,101,125,32,2741,2750,2711,2765,2735,2759,32,2736,2752,2742,2759,2721,2765,2735,2754,2738,32,2709,2736,2741,2750,2734,2750,2690,32,2694,2741,2752,32,2715,2759,46]);
+    gu_trans.cancel_success = String.fromCodePoint(...[2703,2730,2763,2695,2728,2765,2719,2734,2759,2728,2765,2719,32,2736,2726,32,2709,2736,2741,2750,2734,2750,2690,32,2694,2741,2752,32,2715,2759,32,2693,2728,2759,32,2744,2734,2735,32,2744,2765,2738,2763,2719,32,2745,2741,2759,32,2697,2730,2738,2732,2765,2727,32,2715,2759,46]);
+    gu_trans.no_appointments = String.fromCodePoint(...[2724,2734,2750,2736,2750,32,2728,2763,2690,2727,2750,2735,2759,2738,2750,32,2744,2690,2730,2736,2765,2709,32,2734,2750,2719,2759,32,2709,2763,2696,32,2694,2711,2750,2734,2752,32,2703,2730,2763,2695,2728,2765,2719,2734,2759,2728,2765,2719,32,2734,2739,2752,32,2728,2725,2752,46]);
+
+    hi_trans.welcome = String.fromCodePoint(...[128075,32,42,42,67,97,114,101,77,97,116,101,32,65,73,42,42,32,2350,2375,2306,32,2310,2346,2325,2366,32,2360,2381,2357,2366,2327,2340,32,2361,2376,10,42,2310,2346,2325,2366,32,2348,2369,2342,2381,2343,2367,2350,2366,2344,32,2360,2381,2357,2366,2360,2381,2341,2381,2351,32,2360,2375,2357,2366,32,2360,2366,2341,2368,42,10,10,2350,2376,2306,32,2354,2325,2381,2359,2339,2379,2306,32,2325,2366,32,2357,2367,2358,2381,2354,2375,2359,2339,32,2325,2352,2344,2375,44,32,2309,2346,2377,2311,2306,2335,2350,2375,2306,2335,32,2348,2369,2325,32,2325,2352,2344,2375,44,32,2337,2377,2325,2381,2335,2352,2379,2306,32,2325,2379,32,2326,2379,2332,2344,2375,32,2324,2352,32,2360,2381,2357,2366,2360,2381,2341,2381,2351,32,2360,2306,2348,2306,2343,2368,32,2327,2339,2344,2366,2323,2306,32,2350,2375,2306,32,2310,2346,2325,2368,32,2350,2342,2342,32,2325,2352,32,2360,2325,2340,2366,32,2361,2370,2305,2404,32,2310,2332,32,2350,2376,2306,32,2310,2346,2325,2368,32,2325,2381,2351,2366,32,2350,2342,2342,32,2325,2352,2370,2305,63]);
+    hi_trans.placeholder = String.fromCodePoint(...[2354,2325,2381,2359,2339,44,32,2346,2381,2352,2358,2381,2344,32,2351,2366,32,2325,2366,2352,2381,2351,32,2354,2367,2326,2375,2306,46,46,46]);
+    hi_trans.btn_triage = String.fromCodePoint(...[128269,32,2354,2325,2381,2359,2339,32,2357,2367,2358,2381,2354,2375,2359,2339]);
+    hi_trans.btn_find = String.fromCodePoint(...[128104,8205,9877,65039,32,2337,2377,2325,2381,2335,2352,32,2326,2379,2332,2375,2306]);
+    hi_trans.btn_book = String.fromCodePoint(...[128197,32,2309,2346,2377,2311,2306,2335,2350,2375,2306,2335,32,2348,2369,2325,32,2325,2352,2375,2306]);
+    hi_trans.btn_appt = String.fromCodePoint(...[128203,32,2350,2375,2352,2368,32,2309,2346,2377,2311,2306,2335,2350,2375,2306,2335]);
+    hi_trans.btn_emergency = String.fromCodePoint(...[128680,32,2310,2346,2366,2340,2325,2366,2354,2368,2344,32,2350,2342,2342]);
+    hi_trans.btn_directions = String.fromCodePoint(...[128205,32,2309,2360,2381,2346,2340,2366,2354,32,2344,2375,2357,2367,2327,2375,2358,2344]);
+    hi_trans.btn_compare = String.fromCodePoint(...[9878,65039,32,2337,2377,2325,2381,2335,2352,2379,2306,32,2325,2368,32,2340,2369,2354,2344,2366]);
+    hi_trans.btn_tools = String.fromCodePoint(...[128161,32,2360,2381,2357,2366,2360,2381,2341,2381,2351,32,2313,2346,2325,2352,2339]);
+    hi_trans.btn_faq = String.fromCodePoint(...[10067,32,2325,2375,2351,2352,2350,2375,2335,32,2360,2375,32,2346,2370,2331,2375,2306]);
+    hi_trans.emergency_title = String.fromCodePoint(...[128680,32,2310,2346,2366,2340,2325,2366,2354,2368,2344,32,2330,2375,2340,2366,2357,2344,2368,32,2360,2325,2381,2352,2367,2351]);
+    hi_trans.emergency_guideline = String.fromCodePoint(...[2327,2306,2349,2368,2352,32,2354,2325,2381,2359,2339,32,2346,2366,2319,32,2327,2319,32,2361,2376,2306,2404,32,2325,2371,2346,2351,2366,32,2340,2369,2352,2306,2340,32,2330,2367,2325,2367,2340,2381,2360,2366,32,2360,2361,2366,2351,2340,2366,32,2346,2381,2352,2366,2346,2381,2340,32,2325,2352,2375,2306,2404]);
+    hi_trans.emergency_btn = String.fromCodePoint(...[2310,2346,2366,2340,2325,2366,2354,2368,2344,32,2344,2306,2348,2352,32,40,49,48,56,41]);
+    hi_trans.emergency_appt = String.fromCodePoint(...[2340,2381,2357,2352,2367,2340,32,2348,2369,2325,2367,2306,2327]);
+    hi_trans.confirm_appt = String.fromCodePoint(...[2346,2369,2359,2381,2335,2367,32,2325,2352,2375,2306]);
+    hi_trans.reschedule = String.fromCodePoint(...[2346,2369,2344,2352,2381,2344,2367,2352,2381,2343,2366,2352,2367,2340,32,2325,2352,2375,2306]);
+    hi_trans.cancel = String.fromCodePoint(...[2352,2342,2381,2342,32,2325,2352,2375,2306]);
+    hi_trans.view_details = String.fromCodePoint(...[2357,2367,2357,2352,2339,32,2342,2375,2326,2375,2306]);
+    hi_trans.ask_feedback = String.fromCodePoint(...[2337,2377,46,32,123,100,111,99,116,111,114,125,32,2325,2375,32,2360,2366,2341,32,2310,2346,2325,2366,32,2309,2344,2369,2349,2357,32,2325,2376,2360,2366,32,2352,2361,2366,63,32,2325,2371,2346,2351,2366,32,2352,2375,2335,32,2325,2352,2375,2306,58]);
+    hi_trans.submit_feedback = String.fromCodePoint(...[2347,2368,2337,2348,2376,2325,32,2349,2375,2332,2375,2306]);
+    hi_trans.feedback_placeholder = String.fromCodePoint(...[2309,2346,2344,2368,32,2360,2350,2368,2325,2381,2359,2366,32,2351,2361,2366,2305,32,2354,2367,2326,2375,2306,46,46,46]);
+    hi_trans.feedback_success = String.fromCodePoint(...[2343,2344,2381,2351,2357,2366,2342,33,32,2310,2346,2325,2368,32,2360,2350,2368,2325,2381,2359,2366,32,2360,2369,2352,2325,2381,2359,2367,2340,32,2324,2352,32,2360,2367,2306,2325,2381,2352,2344,2366,2311,2332,2364,32,2361,2379,32,2327,2312,32,2361,2376,46]);
+    hi_trans.reschedule_success = String.fromCodePoint(...[2309,2346,2377,2311,2306,2335,2350,2375,2306,2335,32,2360,2347,2354,2340,2366,2346,2370,2352,2381,2357,2325,32,123,100,97,116,101,125,32,2325,2379,32,123,116,105,109,101,125,32,2348,2332,2375,32,2346,2369,2344,2352,2381,2344,2367,2352,2381,2343,2366,2352,2367,2340,32,2325,2352,32,2342,2367,2351,2366,32,2327,2351,2366,32,2361,2376,2404]);
+    hi_trans.cancel_success = String.fromCodePoint(...[2309,2346,2377,2311,2306,2335,2350,2375,2306,2335,32,2352,2342,2381,2342,32,2325,2352,32,2342,2367,2351,2366,32,2327,2351,2366,32,2361,2376,32,2324,2352,32,2360,2381,2354,2377,2335,32,2326,2366,2354,2368,32,2361,2376,2404]);
+    hi_trans.no_appointments = String.fromCodePoint(...[2310,2346,2325,2375,32,2346,2306,2332,2368,2325,2371,2340,32,2357,2367,2357,2352,2339,32,2325,2375,32,2354,2367,2319,32,2325,2379,2312,32,2310,2327,2366,2350,2368,32,2309,2346,2377,2311,2306,2335,2350,2375,2306,2335,32,2344,2361,2368,2306,32,2350,2367,2354,2366,2404]);
+
+    this.translations = {
+      en: {
+        welcome: "👋 Welcome to **CareMate AI**\\n*Your Intelligent Healthcare Companion*\\n\\nI can help you analyze symptoms, schedule appointments, search specialists, and calculate health stats. How can I help you today?",
+        placeholder: "Type a symptom, question, or task...",
+        btn_triage: "🔍 Analyze Symptoms",
+        btn_find: "👨‍⚕️ Find Doctors",
+        btn_book: "📅 Book Appointment",
+        btn_appt: "📋 My Appointments",
+        btn_emergency: "🚨 Emergency Help",
+        btn_directions: "📍 Directions",
+        btn_compare: "⚖️ Compare Doctors",
+        btn_tools: "💡 Health Tools",
+        btn_faq: "❓ Ask CareMate",
+        emergency_title: "🚨 EMERGENCY ALERT TRIGGERED",
+        emergency_guideline: "Critical symptoms detected. Please seek immediate attention.",
+        emergency_btn: "Dial Emergency (108)",
+        emergency_appt: "Instant Booking",
+        confirm_appt: "Confirm Appointment",
+        reschedule: "Reschedule",
+        cancel: "Cancel",
+        view_details: "View Details",
+        ask_feedback: "How was your recent appointment with Dr. {doctor}? Please rate your experience:",
+        submit_feedback: "Submit Feedback",
+        feedback_placeholder: "Write your review here (optional)...",
+        feedback_success: "Thank you! Your review has been saved and synchronized.",
+        reschedule_success: "Appointment rescheduled successfully to {date} at {time}.",
+        cancel_success: "Appointment has been cancelled and the slot is now open.",
+        no_appointments: "No upcoming appointments found for your registered contact details."
+      },
+      gu: gu_trans,
+      hi: hi_trans
     };
   }
 
   init() {
     if (!this.container || !this.fab) return;
 
-    // Toggle chatbot
     this.fab.addEventListener("click", () => this.toggleChat());
     this.closeBtn.addEventListener("click", () => this.toggleChat(false));
 
-    // Submit user message
     this.inputForm.addEventListener("submit", (e) => {
       e.preventDefault();
       const text = this.inputField.value.trim();
@@ -2827,38 +2906,29 @@ class AntigravitySmartChatbot {
       this.inputField.value = "";
     });
 
-    // Voice assistant placeholder visual tip
-    const micBtn = document.getElementById("chatbot-mic-btn");
-    if (micBtn) {
-      micBtn.addEventListener("click", () => {
-        const voiceTip = this.lang === 'gu' ? "અવાજ સહાયક ટૂંક સમયમાં આવી રહ્યો છે!" : (this.lang === 'hi' ? "आवाज सहायक जल्द ही आ रहा है!" : "Voice assistant is coming soon!");
-        alert(voiceTip);
-      });
-    }
+    this.setupSpeechRecognition();
 
-    // Load initial language
+    window.addEventListener("storage_local", () => {
+      if (this.container && !this.container.classList.contains("hidden-chatbot")) {
+        this.checkUpcomingAppointments(true); // silent refresh
+      }
+    });
+
     this.loadLanguage(this.lang);
+    this.setupGuestConversionMonitor();
   }
 
   loadLanguage(lang) {
     this.lang = lang;
-    
-    // Update placeholders
     if (this.inputField) {
-      this.inputField.placeholder = CHATBOT_TRANSLATIONS[lang].placeholder;
-    }
-    const title = document.querySelector(".chatbot-title");
-    if (title) {
-      title.textContent = CHATBOT_TRANSLATIONS[lang].welcome_title || "Hospital Assistant ChatBot";
+      this.inputField.placeholder = this.translations[lang].placeholder;
     }
     const statusText = document.querySelector(".chatbot-status-text");
     if (statusText) {
-      statusText.textContent = CHATBOT_TRANSLATIONS[lang].online;
+      statusText.textContent = this.lang === 'gu' ? String.fromCodePoint(...[2741,2751,2736,2750,2707,2736]) : (this.lang === 'hi' ? String.fromCodePoint(...[2311,2344,2354,2366,2311,2344]) : "Online");
     }
-
-    // Refresh menu chips if chatbot is open and we are in idle/menu state
     if (this.container && !this.container.classList.contains("hidden-chatbot")) {
-      if (this.state === "idle" || this.state === "menu") {
+      if (this.state === "idle") {
         this.showMenu();
       }
     }
@@ -2870,24 +2940,56 @@ class AntigravitySmartChatbot {
       this.container.classList.remove("hidden-chatbot");
       this.fab.classList.remove("chatbot-fab-pulse");
       
-      // If messages are empty, show greeting
       if (this.messagesContainer.children.length === 0) {
         this.showGreeting();
       }
+      this.checkUpcomingAppointments();
+      this.checkForPendingReviews();
     } else {
       this.container.classList.add("hidden-chatbot");
     }
   }
 
+  showGreeting() {
+    this.renderMessage(this.translations[this.lang].welcome, "assistant");
+    this.showMenu();
+  }
+
+  showMenu() {
+    this.suggestionsContainer.innerHTML = "";
+    const items = [
+      { text: this.translations[this.lang].btn_triage, action: () => this.startSymptomTriage() },
+      { text: this.translations[this.lang].btn_find, action: () => this.startDoctorDiscovery() },
+      { text: this.translations[this.lang].btn_book, action: () => this.startBookingFlow() },
+      { text: this.translations[this.lang].btn_appt, action: () => this.showAppointments() },
+      { text: this.translations[this.lang].btn_directions, action: () => this.startDirectionsQuery() },
+      { text: this.translations[this.lang].btn_compare, action: () => this.startComparisonFlow() },
+      { text: this.translations[this.lang].btn_tools, action: () => this.startHealthToolsMenu() },
+      { text: this.translations[this.lang].btn_faq, action: () => this.startFaqSearch() },
+      { text: this.translations[this.lang].btn_emergency, action: () => this.triggerEmergencyMode() }
+    ];
+
+    items.forEach(item => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.innerHTML = item.text;
+      chip.addEventListener("click", () => {
+        this.renderMessage(item.text, "user");
+        item.action();
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
   showTyping() {
-    this.hideTyping(); // avoid duplicates
+    this.hideTyping();
     const row = document.createElement("div");
     row.className = "chatbot-typing-row";
     row.id = "chatbot-typing-indicator";
     
     const avatar = document.createElement("div");
     avatar.className = "chatbot-avatar-container";
-    avatar.innerHTML = `<i class="fa-solid fa-user-doctor"></i>`;
+    avatar.innerHTML = `<i class="fa-solid fa-heart-pulse"></i>`;
     row.appendChild(avatar);
 
     const indicator = document.createElement("div");
@@ -2901,28 +3003,33 @@ class AntigravitySmartChatbot {
 
   hideTyping() {
     const indicator = document.getElementById("chatbot-typing-indicator");
-    if (indicator) indicator.remove();
+    if (indicator) {
+      indicator.remove();
+    }
   }
 
-  renderMessage(text, sender = "assistant", isHtml = false) {
+  renderMessage(content, sender = "assistant", type = "text") {
     const row = document.createElement("div");
     row.className = `chatbot-message-row ${sender}`;
     
     if (sender === "assistant") {
       const avatar = document.createElement("div");
       avatar.className = "chatbot-avatar-container";
-      avatar.innerHTML = `<i class="fa-solid fa-user-doctor"></i>`;
+      avatar.innerHTML = `<i class="fa-solid fa-heart-pulse"></i>`;
       row.appendChild(avatar);
     }
     
     const bubble = document.createElement("div");
     bubble.className = `chatbot-bubble ${sender}`;
-    if (isHtml) {
-      bubble.innerHTML = text;
+    
+    if (type === "text") {
+      let parsed = content
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*(.*?)\*/g, "<em>$1</em>")
+        .replace(/\n/g, "<br>");
+      bubble.innerHTML = parsed;
     } else {
-      // Parse simple bold markdown "**"
-      let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      bubble.innerHTML = formattedText;
+      bubble.appendChild(content);
     }
     
     row.appendChild(bubble);
@@ -2934,801 +3041,1760 @@ class AntigravitySmartChatbot {
     this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
   }
 
-  showGreeting() {
+  detectEmergency(text) {
+    const raw = text.toLowerCase();
+    const keywords = [
+      "chest pain", "heart attack", "difficulty breathing", "cannot breathe", "stroke", 
+      "heavy bleeding", "bleeding heavily", "seizure", "unconscious", "choking",
+      String.fromCodePoint(...[2742,2759,2721,2765,2735,2754]), String.fromCodePoint(...[2715,2724,2753,2726,2765,2727,2751]), String.fromCodePoint(...[2738,2726,2726]),
+      String.fromCodePoint(...[2330,2375,2340,2366]), String.fromCodePoint(...[2360,2366,2306,2360])
+    ];
+    return keywords.some(kw => raw.includes(kw));
+  }
+
+  triggerEmergencyMode() {
+    this.state = "emergency";
     this.showTyping();
     setTimeout(() => {
       this.hideTyping();
-      this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].welcome, "assistant");
-      this.showMenu();
-    }, 600);
+      
+      const card = document.createElement("div");
+      card.className = "caremate-reminder-box caremate-emergency-mode-card";
+      card.innerHTML = `
+        <div class="caremate-emergency-header">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span>${this.translations[this.lang].emergency_title}</span>
+        </div>
+        <div class="caremate-reminder-content">
+          <strong>${this.translations[this.lang].emergency_guideline}</strong><br><br>
+          • Ambulance Hotline: <strong>108</strong><br>
+          • Emergency Room: Building A, Ground Floor<br>
+          • Medical Hotline: +91 99999 11111<br><br>
+          <em>First-Aid: Sit upright, loosen clothing, remain calm and breathe slowly.</em>
+        </div>
+        <div class="caremate-reminder-actions">
+          <a href="tel:108" class="caremate-reminder-btn primary text-center" style="text-decoration:none; display:inline-block; flex: 1;">
+            <i class="fa-solid fa-phone"></i> Call 108
+          </a>
+          <button class="caremate-reminder-btn secondary" id="emergency-instant-book">
+            ${this.translations[this.lang].emergency_appt}
+          </button>
+          <button class="caremate-reminder-btn danger" id="emergency-exit">
+            Exit Alert
+          </button>
+        </div>
+      `;
+
+      card.querySelector("#emergency-instant-book").addEventListener("click", () => {
+        this.renderMessage("Instant Booking (Emergency)", "user");
+        this.flowData.emergencyTriage = true;
+        this.startBookingFlow();
+      });
+
+      card.querySelector("#emergency-exit").addEventListener("click", () => {
+        this.renderMessage("Exit Emergency Mode", "user");
+        this.state = "idle";
+        this.showMenu();
+      });
+
+      this.renderMessage(card, "assistant", "widget");
+      this.suggestionsContainer.innerHTML = "";
+    }, 500);
   }
 
-  showMenu() {
-    this.suggestionsContainer.innerHTML = "";
-    this.state = "menu";
-    
-    const options = [
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_find_dept, icon: '<i class="fa-solid fa-stethoscope"></i>', action: () => this.startSymptomChecker() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_find_doc, icon: '<i class="fa-solid fa-user-doctor"></i>', action: () => this.showDoctors() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_book, icon: '<i class="fa-solid fa-calendar-check"></i>', action: () => this.startBooking() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_fees, icon: '<i class="fa-solid fa-wallet"></i>', action: () => this.showDoctorFees() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_opd, icon: '<i class="fa-solid fa-clock"></i>', action: () => this.showOpdTimings() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_emergency, icon: '<i class="fa-solid fa-circle-exclamation text-rose-500"></i>', action: () => this.showEmergencyCard() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_nav, icon: '<i class="fa-solid fa-compass"></i>', action: () => this.showNavigationMenu() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_tips, icon: '<i class="fa-solid fa-lightbulb text-amber-500"></i>', action: () => this.showHealthTips() },
-      { text: CHATBOT_TRANSLATIONS[this.lang].option_quiz, icon: '<i class="fa-solid fa-circle-question"></i>', action: () => this.startQuiz() }
-    ];
-
-    options.forEach(opt => {
-      const chip = document.createElement("button");
-      chip.className = "chatbot-chip";
-      chip.innerHTML = `${opt.icon} <span>${opt.text}</span>`;
-      chip.addEventListener("click", () => {
-        this.suggestionsContainer.innerHTML = "";
-        opt.action();
+  setupSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      this.micBtn.addEventListener("click", () => {
+        alert(this.lang === 'gu' ? String.fromCodePoint(...[2734,2750,2742,2750,2739,32,2744,2750,2741,2750,2735,2750,2709,32,2703,2730,2750,2738,32,2716,2759]) : (this.lang === 'hi' ? String.fromCodePoint(...[2310,2357,2366,2332,32,2360,2361,2366,2351,2325,32,2344,2361,2368,2306]) : "Voice input is not supported in this browser!"));
       });
-      this.suggestionsContainer.appendChild(chip);
+      return;
+    }
+
+    this.recognition = new SpeechRecognition();
+    this.recognition.continuous = false;
+    this.recognition.interimResults = false;
+
+    this.recognition.onstart = () => {
+      this.isRecording = true;
+      this.micBtn.classList.add("caremate-speech-active");
+      this.inputField.placeholder = this.lang === 'gu' ? String.fromCodePoint(...[2744,2750,2733,2755,2736,2752,32,2736,2759,2719,2751,2709]) : (this.lang === 'hi' ? String.fromCodePoint(...[2360,2369,2344,32,2352,2361,2375,32,2361,2376,2305]) : "Listening...");
+    };
+
+    this.recognition.onend = () => {
+      this.isRecording = false;
+      this.micBtn.classList.remove("caremate-speech-active");
+      this.inputField.placeholder = this.translations[this.lang].placeholder;
+    };
+
+    this.recognition.onresult = (event) => {
+      const resultText = event.results[0][0].transcript;
+      if (resultText) {
+        this.inputField.value = resultText;
+        this.handleUserInput(resultText);
+        this.inputField.value = "";
+      }
+    };
+
+    this.recognition.onerror = (err) => {
+      console.error("Speech Recognition Error:", err);
+      this.micBtn.classList.remove("caremate-speech-active");
+    };
+
+    this.micBtn.addEventListener("click", () => {
+      if (this.isRecording) {
+        this.recognition.stop();
+      } else {
+        if (this.lang === "gu") this.recognition.lang = "gu-IN";
+        else if (this.lang === "hi") this.recognition.lang = "hi-IN";
+        else this.recognition.lang = "en-US";
+        
+        this.recognition.start();
+      }
     });
   }
 
   handleUserInput(text) {
     this.renderMessage(text, "user");
-    
-    // check emergency first
+
     if (this.detectEmergency(text)) {
+      this.triggerEmergencyMode();
       return;
     }
 
-    if (this.state === "booking_name") {
-      this.booking.name = text;
-      this.bookingFlowStep("dept");
-      return;
+    if (this.state === "calc_bmi_weight") {
+      this.handleBmiWeight(text);
+    } else if (this.state === "calc_bmi_height") {
+      this.handleBmiHeight(text);
+    } else if (this.state === "calc_water_weight") {
+      this.handleWaterWeight(text);
+    } else if (this.state === "calc_water_activity") {
+      this.handleWaterActivity(text);
+    } else if (this.state === "calc_heart_age") {
+      this.handleHeartAge(text);
+    } else if (this.state === "calc_heart_bp") {
+      this.handleHeartBp(text);
+    } else if (this.state === "calc_heart_smoking") {
+      this.handleHeartSmoking(text);
+    } else if (this.state === "calc_heart_family") {
+      this.handleHeartFamily(text);
+    } else if (this.state === "calc_diabetes_age") {
+      this.handleDiabetesAge(text);
+    } else if (this.state === "calc_diabetes_family") {
+      this.handleDiabetesFamily(text);
+    } else if (this.state === "calc_diabetes_active") {
+      this.handleDiabetesActive(text);
+    } else if (this.state === "calc_diabetes_symptoms") {
+      this.handleDiabetesSymptoms(text);
+    } else if (this.state === "calc_pregnancy_lmp") {
+      this.handlePregnancyLmp(text);
+    } else if (this.state === "faq_search") {
+      this.handleFaqSearchQuery(text);
+    } else if (this.state === "booking_patient_name") {
+      this.handleBookingName(text);
+    } else if (this.state === "booking_patient_phone") {
+      this.handleBookingPhone(text);
+    } else if (this.state === "booking_patient_email") {
+      this.handleBookingEmail(text);
+    } else if (this.state === "booking_symptoms") {
+      this.handleBookingSymptoms(text);
+    } else if (this.state === "triage_input") {
+      this.handleTriageInput(text);
+    } else {
+      this.showTyping();
+      setTimeout(() => {
+        this.hideTyping();
+        const matchedFaq = this.matchFaqText(text);
+        if (matchedFaq) {
+          this.renderMessage(matchedFaq);
+          this.showMenu();
+        } else {
+          this.executeTriageOnText(text);
+        }
+      }, 500);
     }
-
-    if (this.state === "booking_symptoms") {
-      this.booking.symptoms = text;
-      this.bookingFlowStep("summary");
-      return;
-    }
-
-    // fallback to symptom mapping or menu actions
-    this.showTyping();
-    setTimeout(() => {
-      this.hideTyping();
-      
-      // try to detect symptom in user query
-      const dept = this.detectSymptoms(text);
-      if (dept) {
-        this.recommendDepartment(dept);
-      } else if (text.toLowerCase().includes("opd") || text.toLowerCase().includes("time")) {
-        this.showOpdTimings();
-      } else if (text.toLowerCase().includes("emerg") || text.toLowerCase().includes("sos")) {
-        this.showEmergencyCard();
-      } else if (text.toLowerCase().includes("navig") || text.toLowerCase().includes("where is") || text.toLowerCase().includes("direction")) {
-        this.showNavigationMenu();
-      } else {
-        // Not understood, show menu options
-        const fallbackMsg = this.lang === 'gu' ? "મને આ પ્રશ્ન સમજાયો નથી. કૃપા કરીને નીચેના વિકલ્પોમાંથી એક પસંદ કરો:" : (this.lang === 'hi' ? "मुझे यह प्रश्न समझ में नहीं आया। कृपया नीचे दिए गए विकल्पों में से एक चुनें:" : "I'm not sure I understood that. Please choose one of the options below:");
-        this.renderMessage(fallbackMsg);
-        this.showMenu();
-      }
-    }, 700);
   }
 
-  detectEmergency(text) {
-    const cleanText = text.toLowerCase();
-    const keywords = EMERGENCY_KEYWORDS[this.lang] || [];
-    
-    // Check if any keyword matches
-    const isEmergency = keywords.some(kw => cleanText.includes(kw));
-    
-    if (isEmergency) {
-      this.showEmergencyCard();
-      return true;
-    }
-    return false;
-  }
-
-  showEmergencyCard() {
-    this.showTyping();
-    this.state = "emergency";
+  startSymptomTriage() {
+    this.state = "triage_input";
+    const promptMsg = this.lang === 'gu' ? String.fromCodePoint(...[2709,2755,2730,2750,2709,2736,2752,32,2744,2750,2736,2752,2724,2750,32,2738,2709,2765,2743,2723,2763,2736,2750,2719,2750,2735,32,2741,2751,2742,2765,2738,2759,2743,2723,2750,2738,2750,32,2709,2736,2752,2728,2759,32,2741,2751,2742,2750,2736,2750,2736,2751,2725,2709,2750,58]) : (this.lang === 'hi' ? String.fromCodePoint(...[2325,2381,2352,2369,2346,2351,2366,32,2309,2346,2344,2375,32,2354,2325,2381,2359,2339,2379,2306,32,2325,2366,32,2357,2367,2358,2381,2354,2375,2359,2339,32,2325,2352,2375,2306,58]) : "Please describe your symptoms in detail (e.g., 'I have fever and dry cough'):");
+    this.renderMessage(promptMsg);
     this.suggestionsContainer.innerHTML = "";
-    
+  }
+
+  handleTriageInput(text) {
+    this.showTyping();
     setTimeout(() => {
       this.hideTyping();
-      
+      this.executeTriageOnText(text);
+    }, 600);
+  }
+
+  executeTriageOnText(text) {
+    const raw = text.toLowerCase();
+    let dept = "General Medicine";
+    let urgency = "low";
+    let advice = "Rest, stay hydrated, and consult a physician if symptoms persist.";
+
+    const pulmonologyKeywords = ["cough", "coughing", "asthma", "breathing difficulty", "shortness of breath", "wheezing", String.fromCodePoint(...[2709,2750,2736,2752]), String.fromCodePoint(...[2741,2751,2742,2750,2736,2750]), String.fromCodePoint(...[2326,2366,2306,2360,2368])];
+    const cardiologyKeywords = ["chest pain", "heart burn", "heart pain", "palpitations", String.fromCodePoint(...[2718,2750,2724,2750]), String.fromCodePoint(...[2330,2366,2340,2366])];
+    const neurologyKeywords = ["migraine", "headache", "dizziness", "numbness", String.fromCodePoint(...[2738,2750,2725,2750]), String.fromCodePoint(...[2358,2367,2352,2342,2352,2381,2342])];
+    const dermatologyKeywords = ["skin rash", "rash", "acne", "pimple", "itching", String.fromCodePoint(...[2716,2750,2738,2721,2751]), String.fromCodePoint(...[2340,2381,2357,2330,2366])];
+    const entKeywords = ["ear pain", "hearing", "throat infection", "sore throat", String.fromCodePoint(...[2709,2750,2736,2751]), String.fromCodePoint(...[2327,2354,2366])];
+    const gynecologyKeywords = ["pregnancy", "pregnant", "period pain", String.fromCodePoint(...[2711,2752,2728,2750]), String.fromCodePoint(...[2327,2352,2381,2349,2357,2340,2368])];
+    const pediatricsKeywords = ["child fever", "kids", "baby", "infant", String.fromCodePoint(...[2716,2750,2733,2750]), String.fromCodePoint(...[2348,2361,2330,2366])];
+    const psychologyKeywords = ["anxiety", "stress", "depression", "sadness", String.fromCodePoint(...[2724,2753,2733,2750]), String.fromCodePoint(...[2340,2344,2366,2357])];
+    const orthopedicsKeywords = ["bone fracture", "fracture", "broken leg", "broken arm", "joint pain", "knee pain", "back pain", String.fromCodePoint(...[2745,2750,2721,2751]), String.fromCodePoint(...[2361,2337,2381,2337,2368])];
+
+    if (cardiologyKeywords.some(kw => raw.includes(kw))) {
+      dept = "Cardiology";
+      urgency = "emergency";
+      advice = "Consult a cardiologist immediately. Go to the nearest Emergency room if pain radiates.";
+    } else if (pulmonologyKeywords.some(kw => raw.includes(kw))) {
+      dept = "Pulmonology";
+      urgency = "high";
+      advice = "Consult our Pulmonologist. Seek immediate care if experiencing breathing struggles.";
+    } else if (orthopedicsKeywords.some(kw => raw.includes(kw))) {
+      dept = "Orthopedics";
+      urgency = raw.includes("fracture") || raw.includes("broken") ? "high" : "medium";
+      advice = "Avoid putting weight on the affected limb. Consult an orthopedic specialist.";
+    } else if (pediatricsKeywords.some(kw => raw.includes(kw))) {
+      dept = "Pediatrics";
+      urgency = "high";
+      advice = "Monitor child temperature. Consult our specialist pediatrician within 12 hours.";
+    } else if (neurologyKeywords.some(kw => raw.includes(kw))) {
+      dept = "Neurology";
+      urgency = "medium";
+      advice = "Keep in a dark, quiet room. Consult a neurologist if headaches are recurring.";
+    } else if (gynecologyKeywords.some(kw => raw.includes(kw))) {
+      dept = "Gynecology";
+      urgency = "medium";
+      advice = "Consult a gynecologist to discuss maternal/pregnancy care steps.";
+    } else if (entKeywords.some(kw => raw.includes(kw))) {
+      dept = "ENT";
+      urgency = "low";
+      advice = "Gargle with warm salt water. Book an outpatient specialist review.";
+    } else if (dermatologyKeywords.some(kw => raw.includes(kw))) {
+      dept = "Dermatology";
+      urgency = "low";
+      advice = "Avoid scratching or applying unverified creams. Consult a dermatologist.";
+    } else if (psychologyKeywords.some(kw => raw.includes(kw))) {
+      dept = "Psychology";
+      urgency = "low";
+      advice = "Practice slow deep breathing. Consider booking a session with our clinical psychologist.";
+    }
+
+    const badgeHtml = `<span class="caremate-urgency-badge ${urgency}">${urgency} urgency</span>`;
+    const summaryMsg = `
+      <strong>Triage Assessment Result</strong><br><br>
+      • Recommended Department: <strong>${dept}</strong><br>
+      • Triage Level: ${badgeHtml}<br>
+      • Recommended Steps: <em>${advice}</em>
+    `;
+    this.renderMessage(summaryMsg);
+    this.rankDoctors(dept);
+  }
+
+  rankDoctors(deptName, sortBy = "rating") {
+    const allDoctors = JSON.parse(localStorage.getItem("phh_doctors")) || [];
+    const activeDocs = allDoctors.filter(d => d.specialty === deptName && d.status !== 'Pending');
+
+    if (activeDocs.length === 0) {
+      this.renderMessage("No active specialist doctors are available for booking in this department currently.");
+      this.state = "idle";
+      this.showMenu();
+      return;
+    }
+
+    const appts = JSON.parse(localStorage.getItem("phh_appointments")) || [];
+    const bookingCounts = {};
+    appts.forEach(a => {
+      bookingCounts[a.doctorId] = (bookingCounts[a.doctorId] || 0) + 1;
+    });
+
+    activeDocs.sort((a, b) => {
+      if (sortBy === "rating") {
+        return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+      } else if (sortBy === "fee") {
+        return (Number(a.fee) || 0) - (Number(b.fee) || 0);
+      } else if (sortBy === "exp") {
+        const expA = parseInt(a.exp) || 0;
+        const expB = parseInt(b.exp) || 0;
+        return expB - expA;
+      } else if (sortBy === "booked") {
+        return (bookingCounts[b.id] || 0) - (bookingCounts[a.id] || 0);
+      }
+      return 0;
+    });
+
+    const docCarousel = document.createElement("div");
+    docCarousel.style.display = "flex";
+    docCarousel.style.flexDirection = "column";
+    docCarousel.style.gap = "10px";
+    docCarousel.style.marginTop = "8px";
+
+    const topDocs = activeDocs.slice(0, 3);
+    topDocs.forEach(doc => {
       const card = document.createElement("div");
-      card.className = "chatbot-emergency-card";
+      card.className = "glass-card doctor-card";
+      card.style.margin = "0";
+      card.style.padding = "10px";
+      
+      const starRating = doc.rating 
+        ? `<i class="fa-solid fa-star" style="color: #fbbf24;"></i> <strong>${doc.rating}</strong>`
+        : `<i class="fa-regular fa-star" style="color: #cbd5e1;"></i> <span style="font-size:0.7rem;">(No reviews)</span>`;
+      
       card.innerHTML = `
-        <div class="chatbot-emergency-header">
-          <i class="fa-solid fa-circle-exclamation"></i>
-          <span>${CHATBOT_TRANSLATIONS[this.lang].emergency_title}</span>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <div style="width: 45px; height: 45px; border-radius: 50%; overflow: hidden; background: #e2e8f0; flex-shrink: 0;">
+            <svg viewBox="0 0 100 100" width="100%" height="100%">
+              <circle cx="50" cy="50" r="45" fill="#e0f2fe"/>
+              <path d="M50,22 C58,22 65,29 65,37 C65,45 58,52 50,52 C42,52 35,45 35,37 C35,29 42,22 50,22 Z" fill="#0284c7"/>
+              <path d="M22,78 C22,64 34,58 50,58 C66,58 78,64 78,78 Z" fill="#0369a1"/>
+            </svg>
+          </div>
+          <div style="flex-grow: 1;">
+            <h4 style="font-size: 0.85rem; margin: 0; color: #0f172a;">${doc.name}</h4>
+            <div style="font-size: 0.72rem; color: #64748b;">${doc.specialty} • ${doc.exp} Exp</div>
+            <div style="font-size: 0.72rem; margin-top: 2px;">
+              ${starRating} • Fee: <strong style="color: var(--primary);">\u20b9${doc.fee}</strong>
+            </div>
+          </div>
         </div>
-        <div class="chatbot-emergency-body">
-          ${CHATBOT_TRANSLATIONS[this.lang].emergency_alert}
+        <div style="margin-top: 8px; display: flex; gap: 6px;">
+          <button class="caremate-reminder-btn primary" style="padding: 4px 8px; font-size: 0.7rem;" id="book-btn-${doc.id}">
+            Book Appointment
+          </button>
+          <button class="caremate-reminder-btn secondary" style="padding: 4px 8px; font-size: 0.7rem;" id="comp-btn-${doc.id}">
+            Compare
+          </button>
         </div>
-        <div class="chatbot-emergency-contacts">
-          <a href="tel:+919999911111" class="chatbot-emergency-link">
-            <i class="fa-solid fa-phone"></i> ${CHATBOT_TRANSLATIONS[this.lang].emergency_call}
-          </a>
-          <a href="tel:108" class="chatbot-emergency-link">
-            <i class="fa-solid fa-truck-medical"></i> ${CHATBOT_TRANSLATIONS[this.lang].emergency_ambulance}
-          </a>
-          <div class="chatbot-emergency-link" style="color: var(--dark);">
-            <i class="fa-solid fa-hospital"></i> ${CHATBOT_TRANSLATIONS[this.lang].emergency_location}
+      `;
+
+      card.querySelector(`#book-btn-${doc.id}`).addEventListener("click", () => {
+        this.renderMessage(`Book appointment with ${doc.name}`, "user");
+        this.flowData.doctorId = doc.id;
+        this.flowData.dept = doc.specialty;
+        this.flowData.doctor = doc;
+        this.promptBookingDetails();
+      });
+
+      card.querySelector(`#comp-btn-${doc.id}`).addEventListener("click", () => {
+        this.renderMessage(`Compare ${doc.name}`, "user");
+        this.compareSingleDoctor(doc);
+      });
+
+      docCarousel.appendChild(card);
+    });
+
+    this.renderMessage(docCarousel, "assistant", "widget");
+
+    this.suggestionsContainer.innerHTML = "";
+    const sortOptions = [
+      { label: "Sort: Highest Rated", value: "rating" },
+      { label: "Sort: Lowest Fee", value: "fee" },
+      { label: "Sort: Most Experienced", value: "exp" },
+      { label: "Sort: Most Popular", value: "booked" }
+    ];
+    sortOptions.forEach(opt => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = opt.label;
+      chip.addEventListener("click", () => {
+        this.renderMessage(opt.label, "user");
+        this.rankDoctors(deptName, opt.value);
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  startDoctorDiscovery() {
+    const depts = JSON.parse(localStorage.getItem("phh_departments")) || [];
+    this.renderMessage("Please select a department clinical specialty:");
+    this.suggestionsContainer.innerHTML = "";
+    depts.forEach(d => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = d.name;
+      chip.addEventListener("click", () => {
+        this.renderMessage(d.name, "user");
+        this.rankDoctors(d.name);
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  startComparisonFlow() {
+    this.state = "compare";
+    const allDoctors = JSON.parse(localStorage.getItem("phh_doctors")) || [];
+    const activeDocs = allDoctors.filter(d => d.status !== 'Pending');
+
+    this.renderMessage("Select the first doctor you wish to compare:");
+    this.suggestionsContainer.innerHTML = "";
+    activeDocs.forEach(d => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = d.name;
+      chip.addEventListener("click", () => {
+        this.renderMessage(d.name, "user");
+        this.flowData.compareDoc1 = d;
+        this.promptSecondDocForComparison(activeDocs.filter(doc => doc.id !== d.id));
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  compareSingleDoctor(doc) {
+    this.flowData.compareDoc1 = doc;
+    const allDoctors = JSON.parse(localStorage.getItem("phh_doctors")) || [];
+    const candidates = allDoctors.filter(d => d.specialty === doc.specialty && d.id !== doc.id && d.status !== 'Pending');
+    this.promptSecondDocForComparison(candidates);
+  }
+
+  promptSecondDocForComparison(candidates) {
+    if (candidates.length === 0) {
+      this.renderMessage("No other active doctors in this clinical specialty to compare against.");
+      this.state = "idle";
+      this.showMenu();
+      return;
+    }
+    this.renderMessage("Select a doctor to compare with:");
+    this.suggestionsContainer.innerHTML = "";
+    candidates.forEach(d => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = d.name;
+      chip.addEventListener("click", () => {
+        this.renderMessage(d.name, "user");
+        this.executeComparison(this.flowData.compareDoc1, d);
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  executeComparison(doc1, doc2) {
+    this.showTyping();
+    setTimeout(() => {
+      this.hideTyping();
+
+      const appts = JSON.parse(localStorage.getItem("phh_appointments")) || [];
+      const countBookings = (id) => appts.filter(a => a.doctorId === id).length;
+
+      const widget = document.createElement("div");
+      widget.className = "caremate-compare-widget";
+      widget.innerHTML = `
+        <div style="font-size:0.85rem; font-weight:700; color:#0f172a; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+          <i class="fa-solid fa-scale-balanced" style="color:var(--primary);"></i>
+          <span>Doctor Comparison Profile</span>
+        </div>
+        <div class="caremate-compare-grid">
+          <div class="caremate-compare-column ${doc1.rating >= (doc2.rating || 0) ? 'recommended' : ''}">
+            ${doc1.rating >= (doc2.rating || 0) ? '<div class="caremate-compare-recommend-tag">Highly Rated</div>' : ''}
+            <div class="caremate-compare-heading">${doc1.name}</div>
+            <div class="caremate-compare-row">
+              <span class="caremate-compare-label">Specialty</span>
+              <span class="caremate-compare-value">${doc1.specialty}</span>
+            </div>
+            <div class="caremate-compare-row">
+              <span class="caremate-compare-label">Rating</span>
+              <span class="caremate-compare-value">⭐ ${doc1.rating || "N/A"}</span>
+            </div>
+            <div class="caremate-compare-row">
+              <span class="caremate-compare-label">Experience</span>
+              <span class="caremate-compare-value">${doc1.exp}</span>
+            </div>
+            <div class="caremate-compare-row">
+              <span class="caremate-compare-label">Fee</span>
+              <span class="caremate-compare-value">\u20b9${doc1.fee}</span>
+            </div>
+            <div class="caremate-compare-row">
+              <span class="caremate-compare-label">Visiting Days</span>
+              <span class="caremate-compare-value" style="font-size:0.6rem;">${doc1.days}</span>
+            </div>
+            <button class="caremate-feedback-submit" style="padding:4px; font-size:0.65rem; margin-top:8px;" id="book-compare-1">Book</button>
+          </div>
+
+          <div class="caremate-compare-column ${doc2.rating > (doc1.rating || 0) ? 'recommended' : ''}">
+            ${doc2.rating > (doc1.rating || 0) ? '<div class="caremate-compare-recommend-tag">Highly Rated</div>' : ''}
+            <div class="caremate-compare-heading">${doc2.name}</div>
+            <div class="caremate-compare-row">
+              <span class="caremate-compare-label">Specialty</span>
+              <span class="caremate-compare-value">${doc2.specialty}</span>
+            </div>
+            <div class="caremate-compare-row">
+              <span class="caremate-compare-label">Rating</span>
+              <span class="caremate-compare-value">⭐ ${doc2.rating || "N/A"}</span>
+            </div>
+            <div class="caremate-compare-row">
+              <span class="caremate-compare-label">Experience</span>
+              <span class="caremate-compare-value">${doc2.exp}</span>
+            </div>
+            <div class="caremate-compare-row">
+              <span class="caremate-compare-label">Fee</span>
+              <span class="caremate-compare-value">\u20b9${doc2.fee}</span>
+            </div>
+            <div class="caremate-compare-row">
+              <span class="caremate-compare-label">Visiting Days</span>
+              <span class="caremate-compare-value" style="font-size:0.6rem;">${doc2.days}</span>
+            </div>
+            <button class="caremate-feedback-submit" style="padding:4px; font-size:0.65rem; margin-top:8px;" id="book-compare-2">Book</button>
           </div>
         </div>
       `;
-      
-      this.messagesContainer.appendChild(card);
-      this.scrollToBottom();
-      
-      // show main menu button
-      setTimeout(() => this.showMenuButton(), 1000);
-    }, 600);
-  }
 
-  showMenuButton() {
-    this.suggestionsContainer.innerHTML = "";
-    const btn = document.createElement("button");
-    btn.className = "chatbot-chip";
-    btn.innerHTML = `<i class="fa-solid fa-arrow-left"></i> <span>${this.lang === 'gu' ? "મુખ્ય મેનુ" : (this.lang === 'hi' ? "मुख्य मेनू" : "Main Menu")}</span>`;
-    btn.addEventListener("click", () => this.showMenu());
-    this.suggestionsContainer.appendChild(btn);
-  }
-
-  showOpdTimings() {
-    this.showTyping();
-    setTimeout(() => {
-      this.hideTyping();
-      this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].opd_timings);
-      this.showMenuButton();
-    }, 400);
-  }
-
-  startSymptomChecker() {
-    this.showTyping();
-    this.state = "symptoms";
-    setTimeout(() => {
-      this.hideTyping();
-      this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].symptom_prompt);
-      
-      // show common symptoms chips with icons
-      const symptoms = {
-        en: [
-          { text: "Cough", icon: '<i class="fa-solid fa-wind text-sky-400"></i>' },
-          { text: "Chest Pain", icon: '<i class="fa-solid fa-heart-pulse text-rose-500"></i>' },
-          { text: "Joint Pain", icon: '<i class="fa-solid fa-bone text-amber-500"></i>' },
-          { text: "Headache", icon: '<i class="fa-solid fa-head-side-virus"></i>' },
-          { text: "Fever", icon: '<i class="fa-solid fa-temperature-high text-orange-500"></i>' }
-        ],
-        gu: [
-          { text: "ઉધરસ", icon: '<i class="fa-solid fa-wind text-sky-400"></i>' },
-          { text: "છાતીમાં દુખાવો", icon: '<i class="fa-solid fa-heart-pulse text-rose-500"></i>' },
-          { text: "સાંધાનો દુખાવો", icon: '<i class="fa-solid fa-bone text-amber-500"></i>' },
-          { text: "માથાનો દુખાવો", icon: '<i class="fa-solid fa-head-side-virus"></i>' },
-          { text: "તાવ", icon: '<i class="fa-solid fa-temperature-high text-orange-500"></i>' }
-        ],
-        hi: [
-          { text: "खांसी", icon: '<i class="fa-solid fa-wind text-sky-400"></i>' },
-          { text: "छाती में दर्द", icon: '<i class="fa-solid fa-heart-pulse text-rose-500"></i>' },
-          { text: "जोड़ों का दर्द", icon: '<i class="fa-solid fa-bone text-amber-500"></i>' },
-          { text: "सिरदर्द", icon: '<i class="fa-solid fa-head-side-virus"></i>' },
-          { text: "बुखार", icon: '<i class="fa-solid fa-temperature-high text-orange-500"></i>' }
-        ]
-      };
-
-      this.suggestionsContainer.innerHTML = "";
-      symptoms[this.lang].forEach(sym => {
-        const chip = document.createElement("button");
-        chip.className = "chatbot-chip";
-        chip.innerHTML = `${sym.icon} <span>${sym.text}</span>`;
-        chip.addEventListener("click", () => {
-          this.renderMessage(sym.text, "user");
-          const dept = this.detectSymptoms(sym.text);
-          this.recommendDepartment(dept);
-        });
-        this.suggestionsContainer.appendChild(chip);
+      widget.querySelector("#book-compare-1").addEventListener("click", () => {
+        this.renderMessage(`Book appointment with ${doc1.name}`, "user");
+        this.flowData.doctorId = doc1.id;
+        this.flowData.dept = doc1.specialty;
+        this.flowData.doctor = doc1;
+        this.promptBookingDetails();
       });
-      
-      // add menu back button
-      const backBtn = document.createElement("button");
-      backBtn.className = "chatbot-chip";
-      backBtn.innerHTML = `<i class="fa-solid fa-arrow-left"></i> <span>${this.lang === 'gu' ? "પાછા" : (this.lang === 'hi' ? "पीछे" : "Back")}</span>`;
-      backBtn.addEventListener("click", () => this.showMenu());
-      this.suggestionsContainer.appendChild(backBtn);
+
+      widget.querySelector("#book-compare-2").addEventListener("click", () => {
+        this.renderMessage(`Book appointment with ${doc2.name}`, "user");
+        this.flowData.doctorId = doc2.id;
+        this.flowData.dept = doc2.specialty;
+        this.flowData.doctor = doc2;
+        this.promptBookingDetails();
+      });
+
+      this.renderMessage(widget, "assistant", "widget");
+      this.state = "idle";
+      this.showMenu();
     }, 500);
   }
 
-  detectSymptoms(text) {
-    const cleanText = text.toLowerCase();
-    const mapping = CHATBOT_SYMPTOMS_MAP[this.lang] || {};
-    
-    for (const [symptom, dept] of Object.entries(mapping)) {
-      if (cleanText.includes(symptom)) {
-        return dept;
-      }
-    }
-    return null;
-  }
+  startBookingFlow() {
+    this.flowData = {};
+    const currUser = JSON.parse(localStorage.getItem("phh_current_user"));
 
-  recommendDepartment(dept) {
-    this.showTyping();
-    setTimeout(() => {
-      this.hideTyping();
-      
-      if (dept) {
-        const translatedDept = this.getTranslatedDept(dept);
-        const msg = CHATBOT_TRANSLATIONS[this.lang].dept_recommended.replace("{dept}", translatedDept);
-        this.renderMessage(msg);
-        
-        // Show view doctors button chip
-        this.suggestionsContainer.innerHTML = "";
-        const viewBtn = document.createElement("button");
-        viewBtn.className = "chatbot-chip";
-        viewBtn.innerHTML = `<i class="fa-solid fa-user-doctor"></i> <span>${CHATBOT_TRANSLATIONS[this.lang].view_docs_btn.replace("{dept}", translatedDept)}</span>`;
-        viewBtn.addEventListener("click", () => this.showDoctors(dept));
-        this.suggestionsContainer.appendChild(viewBtn);
-        
-        const bookBtn = document.createElement("button");
-        bookBtn.className = "chatbot-chip";
-        bookBtn.innerHTML = `<i class="fa-solid fa-calendar-plus"></i> <span>${this.lang === 'gu' ? translatedDept + " માં બુક કરો" : (this.lang === 'hi' ? translatedDept + " में बुक करें" : "Book in " + translatedDept)}</span>`;
-        bookBtn.addEventListener("click", () => {
-          this.booking.dept = dept;
-          this.startBooking(dept);
-        });
-        this.suggestionsContainer.appendChild(bookBtn);
-        
-        this.showMenuButton();
-      } else {
-        this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].dept_not_found);
-        this.showMenu();
-      }
-    }, 600);
-  }
-
-  getTranslatedDept(deptName) {
-    const lang = this.lang;
-    if (typeof DYNAMIC_TRANSLATIONS !== 'undefined' && DYNAMIC_TRANSLATIONS[lang] && DYNAMIC_TRANSLATIONS[lang][deptName]) {
-      return DYNAMIC_TRANSLATIONS[lang][deptName];
-    }
-    return deptName;
-  }
-
-  showDoctors(filterDept = "") {
-    this.showTyping();
-    setTimeout(() => {
-      this.hideTyping();
+    if (currUser) {
+      this.flowData.name = currUser.name || "Guest Patient";
+      this.flowData.phone = currUser.phone || "";
+      this.flowData.email = currUser.email || "";
+      this.startBookingDepartmentSelect();
+    } else {
+      this.state = "booking_patient_name";
+      this.renderMessage("To initiate an appointment scheduling, please enter the patient's full name:");
       this.suggestionsContainer.innerHTML = "";
+    }
+  }
+
+  handleBookingName(name) {
+    this.flowData.name = name;
+    this.state = "booking_patient_phone";
+    this.renderMessage(`Thank you, ${name}. Please enter your 10-digit mobile contact number:`);
+  }
+
+  handleBookingPhone(phone) {
+    const formatted = phone.replace(/\D/g, "");
+    if (formatted.length < 10) {
+      this.renderMessage("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+    this.flowData.phone = phone;
+    this.state = "booking_patient_email";
+    this.renderMessage("Please enter your email address (optional, type 'skip' if you don't wish to provide one):");
+  }
+
+  handleBookingEmail(email) {
+    if (email.toLowerCase() !== "skip" && !email.includes("@")) {
+      this.renderMessage("Please enter a valid email address, or type 'skip'.");
+      return;
+    }
+    this.flowData.email = email.toLowerCase() === "skip" ? "" : email;
+    this.authenticatePatientSession();
+  }
+
+  async authenticatePatientSession() {
+    this.showTyping();
+    const API_BASE = window.API_BASE || '';
+    try {
+      const loginVal = this.flowData.email || this.flowData.phone;
+      const res = await fetch(`${API_BASE}/api/auth/patient-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ loginVal })
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.user) {
+        localStorage.setItem("phh_current_user", JSON.stringify(data.user));
+        window.dispatchEvent(new Event("storage_local"));
+      }
+    } catch (err) {
+      console.warn("Patient background authentication failed, continuing as guest session:", err);
+    }
+    
+    this.hideTyping();
+    this.startBookingDepartmentSelect();
+  }
+
+  startBookingDepartmentSelect() {
+    const depts = JSON.parse(localStorage.getItem("phh_departments")) || [];
+    this.renderMessage("Please select the clinical department specialist you require:");
+    this.suggestionsContainer.innerHTML = "";
+    depts.forEach(d => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = d.name;
+      chip.addEventListener("click", () => {
+        this.renderMessage(d.name, "user");
+        this.flowData.dept = d.name;
+        this.promptDoctorSelect();
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  promptDoctorSelect() {
+    const docs = JSON.parse(localStorage.getItem("phh_doctors")) || [];
+    const matchingDocs = docs.filter(d => d.specialty === this.flowData.dept && d.status !== 'Pending');
+
+    if (matchingDocs.length === 0) {
+      this.renderMessage("No active specialist doctors available in this department. Please choose another clinical area.");
+      this.startBookingDepartmentSelect();
+      return;
+    }
+
+    this.renderMessage("Select a doctor for your consultation:");
+    this.suggestionsContainer.innerHTML = "";
+    matchingDocs.forEach(doc => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = doc.name;
+      chip.addEventListener("click", () => {
+        this.renderMessage(doc.name, "user");
+        this.flowData.doctorId = doc.id;
+        this.flowData.doctor = doc;
+        this.promptBookingDetails();
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  promptBookingDetails() {
+    const allSlots = JSON.parse(localStorage.getItem("phh_slots")) || [];
+    const now = new Date();
+    const docSlots = allSlots.filter(s => {
+      if (s.doctorId !== this.flowData.doctorId || s.status !== "Available") return false;
+      const dateParts = s.date.split("-");
+      const slotTimeObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+      return slotTimeObj > now;
+    });
+
+    if (docSlots.length === 0) {
+      this.renderMessage(`No upcoming available time slots found for Dr. ${this.flowData.doctor.name}. Please select another doctor.`);
+      this.promptDoctorSelect();
+      return;
+    }
+
+    const uniqueDates = [...new Set(docSlots.map(s => s.date))].sort();
+
+    this.renderMessage("Choose an available appointment date:");
+    this.suggestionsContainer.innerHTML = "";
+    uniqueDates.forEach(d => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = d;
+      chip.addEventListener("click", () => {
+        this.renderMessage(d, "user");
+        this.flowData.date = d;
+        this.promptSlotSelect(docSlots.filter(s => s.date === d));
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  promptSlotSelect(slotsForDate) {
+    this.renderMessage("Select an appointment time slot:");
+    this.suggestionsContainer.innerHTML = "";
+    slotsForDate.forEach(s => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = s.time;
+      chip.addEventListener("click", () => {
+        this.renderMessage(s.time, "user");
+        this.flowData.slot = s.time;
+        this.flowData.slotId = s.id;
+        
+        this.state = "booking_symptoms";
+        this.renderMessage("Briefly describe the symptoms or reason for this clinical consultation visit:");
+        this.suggestionsContainer.innerHTML = "";
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  handleBookingSymptoms(symptomText) {
+    this.flowData.symptoms = symptomText;
+    this.renderBookingSummaryReceipt();
+  }
+
+  renderBookingSummaryReceipt() {
+    this.showTyping();
+    setTimeout(() => {
+      this.hideTyping();
       
-      const filtered = filterDept ? doctors.filter(d => d.specialty === filterDept) : doctors;
+      const receiptCard = document.createElement("div");
+      receiptCard.className = "caremate-reminder-box";
+      receiptCard.innerHTML = `
+        <div style="font-size:0.85rem; font-weight:700; color:var(--primary); margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+          <i class="fa-solid fa-receipt"></i>
+          <span>Consultation Booking Summary</span>
+        </div>
+        <div class="caremate-reminder-content">
+          <strong>Patient:</strong> ${this.flowData.name}<br>
+          <strong>Doctor:</strong> ${this.flowData.doctor.name}<br>
+          <strong>Specialty:</strong> ${this.flowData.dept}<br>
+          <strong>Schedule:</strong> ${this.flowData.date} at ${this.flowData.slot}<br>
+          <strong>Consultation Fee:</strong> \u20b9${this.flowData.doctor.fee}.00
+        </div>
+        <div class="caremate-reminder-actions">
+          <button class="caremate-reminder-btn primary" id="pay-confirm-btn" style="flex:1;">
+            Pay & Confirm Booking
+          </button>
+          <button class="caremate-reminder-btn danger" id="cancel-summary-btn">
+            Cancel
+          </button>
+        </div>
+      `;
+
+      receiptCard.querySelector("#pay-confirm-btn").addEventListener("click", () => {
+        this.launchPaymentGateway();
+      });
+
+      receiptCard.querySelector("#cancel-summary-btn").addEventListener("click", () => {
+        this.renderMessage("Booking cancelled.", "assistant");
+        this.state = "idle";
+        this.showMenu();
+      });
+
+      this.renderMessage(receiptCard, "assistant", "widget");
+      this.suggestionsContainer.innerHTML = "";
+    }, 500);
+  }
+
+  async launchPaymentGateway() {
+    this.showTyping();
+    const apptPayload = {
+      name: this.flowData.name,
+      phone: this.flowData.phone,
+      email: this.flowData.email || "N/A",
+      dept: this.flowData.dept,
+      docId: this.flowData.doctorId,
+      date: this.flowData.date,
+      slot: this.flowData.slot,
+      symptoms: this.flowData.symptoms
+    };
+
+    try {
+      this.hideTyping();
+      const newAppt = await window.launchRazorpayPayment(apptPayload);
       
-      if (filtered.length === 0) {
-        const noDocsMsg = this.lang === 'gu' ? "હાલમાં આ વિભાગમાં કોઈ ડોકટરો ઉપલબ્ધ નથી." : (this.lang === 'hi' ? "वर्तमान में इस विभाग में कोई डॉक्टर उपलब्ध नहीं हैं।" : "No doctors are currently available in this department.");
-        this.renderMessage(noDocsMsg);
+      this.showTyping();
+      setTimeout(() => {
+        this.hideTyping();
+        const successMsg = `
+          \ud83c\udf89 **Appointment Booked Successfully!**<br><br>
+          • Reference ID: <strong>${newAppt.id}</strong><br>
+          • Doctor: Dr. ${newAppt.doctorName}<br>
+          • Date/Time: ${newAppt.date} at ${newAppt.slot}<br>
+          • Paid Status: **Success** (Razorpay ID: ${newAppt.payId || newAppt.pay_id || 'N/A'})
+        `;
+        this.renderMessage(successMsg);
+        
+        if (typeof window.syncDatabaseToLocal === "function") {
+          window.syncDatabaseToLocal();
+        }
+
+        this.state = "idle";
+        this.showMenu();
+      }, 500);
+
+    } catch (err) {
+      this.showTyping();
+      setTimeout(() => {
+        this.hideTyping();
+        this.renderMessage(`Booking transaction failed: ${err.message || 'Payment Cancelled'}`);
+        this.state = "idle";
+        this.showMenu();
+      }, 500);
+    }
+  }
+
+  showAppointments() {
+    const user = JSON.parse(localStorage.getItem("phh_current_user"));
+    if (!user) {
+      this.renderMessage("You are not currently logged in. To see your appointment history, please enter your registered mobile contact or email below to log in:");
+      this.state = "booking_patient_phone";
+      return;
+    }
+
+    this.showTyping();
+    setTimeout(() => {
+      this.hideTyping();
+
+      const allAppts = JSON.parse(localStorage.getItem("phh_appointments")) || [];
+      const userAppts = allAppts.filter(a => {
+        const emailMatch = a.patientEmail && user.email && a.patientEmail.toLowerCase() === user.email.toLowerCase();
+        const phoneMatch = a.patientPhone && user.phone && a.patientPhone.replace(/\D/g, "").slice(-10) === user.phone.replace(/\D/g, "").slice(-10);
+        return emailMatch || phoneMatch;
+      });
+
+      if (userAppts.length === 0) {
+        this.renderMessage(this.translations[this.lang].no_appointments);
+        this.state = "idle";
         this.showMenu();
         return;
       }
 
-      this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].doctor_status_title);
-
-      const statusTranslations = {
-        en: { Available: "Available", Busy: "Busy", "Running Late": "Running Late", "Left Hospital": "Left Hospital", status: "Status", fee: "Fee", exp: "Experience" },
-        gu: { Available: "ઉપલબ્ધ", Busy: "વ્યસ્ત", "Running Late": "મોડું દોડે છે", "Left Hospital": "હોસ્પિટલ છોડી દીધી", status: "સ્થિતિ", fee: "ફી", exp: "અનુભવ" },
-        hi: { Available: "उपलब्ध", Busy: "व्यस्त", "Running Late": "देरी से चल रहे हैं", "Left Hospital": "अस्पताल से चले गए", status: "स्थिति", fee: "शुल्क", exp: "अनुभव" }
-      };
-      const t = statusTranslations[this.lang];
-
-      filtered.forEach(doc => {
-        const card = document.createElement("div");
-        card.className = "chatbot-card chatbot-doc-card";
+      this.renderMessage(`Found ${userAppts.length} appointments under your contact detail:`);
+      
+      userAppts.forEach(appt => {
+        const apptCard = document.createElement("div");
+        apptCard.className = "caremate-reminder-box";
+        apptCard.style.margin = "8px 0";
         
-        // Get reviews rating safely
-        const allReviews = JSON.parse(localStorage.getItem("phh_reviews")) || [];
-        const docReviews = allReviews.filter(r => r && (String(r.doctorId) === String(doc.id) || String(r.doctor_id) === String(doc.id)));
-        let ratingText = "New (5.0)";
-        if (docReviews.length > 0) {
-          const sum = docReviews.reduce((acc, r) => acc + Number(r.rating || 5), 0);
-          ratingText = `${(sum / docReviews.length).toFixed(1)} ★`;
-        }
+        const isPast = new Date(appt.date.split("-").join("/")) < new Date().setHours(0,0,0,0);
+        const statusBadge = appt.status === "Cancelled" 
+          ? `<span style="color:#ef4444; font-weight:bold;">Cancelled</span>` 
+          : (isPast ? `<span style="color:#64748b;">Completed</span>` : `<span style="color:#22c55e; font-weight:bold;">${appt.status}</span>`);
 
-        // Determine availability
-        let statusClass = "text-emerald-600";
-        if (doc.status === "Busy") statusClass = "text-rose-600";
-        else if (doc.status === "Running Late") statusClass = "text-amber-500";
-        else if (doc.status === "Left Hospital") statusClass = "text-slate-400";
-
-        const translatedStatus = t[doc.status] || doc.status;
-        const docExperience = doc.exp || (this.lang === 'gu' ? "૧૦+ વર્ષ" : (this.lang === 'hi' ? "10+ वर्ष" : "10+ Yrs"));
-        const bookBtnLabel = this.lang === 'gu' ? "📅 મુલાકાત બુક કરો" : (this.lang === 'hi' ? "📅 अपॉइंटमेंट बुक करें" : "📅 Book Appointment");
-
-        card.innerHTML = `
-          <div class="chatbot-doc-header">
-            <div class="chatbot-doc-avatar">
-              <svg viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="45" fill="rgba(0,102,255,0.08)" stroke="#cbd5e1" stroke-width="2"/>
-                <path d="M50,22 C58,22 65,29 65,37 C65,45 58,52 50,52 C42,52 35,45 35,37 C35,29 42,22 50,22 Z" fill="#475569"/>
-                <path d="M22,78 C22,64 34,58 50,58 C66,58 78,64 78,78 Z" fill="#64748b"/>
-              </svg>
-            </div>
-            <div class="chatbot-doc-info">
-              <span class="chatbot-doc-name">${doc.name}</span>
-              <span class="chatbot-doc-dept">${this.getTranslatedDept(doc.specialty)}</span>
-            </div>
+        apptCard.innerHTML = `
+          <div style="font-size:0.75rem; color:#64748b; margin-bottom:4px;">Ref ID: ${appt.id}</div>
+          <div class="caremate-reminder-content" style="margin-bottom:6px;">
+            <strong>Doctor:</strong> ${appt.doctorName}<br>
+            <strong>Date/Time:</strong> ${appt.date} at ${appt.slot || appt.time}<br>
+            <strong>Status:</strong> ${statusBadge}
           </div>
-          <div class="chatbot-doc-meta">
-            <div><i class="fa-solid fa-graduation-cap"></i> <strong>${t.exp}:</strong> ${docExperience}</div>
-            <div><i class="fa-solid fa-star"></i> <strong>Rating:</strong> ${ratingText}</div>
-            <div><i class="fa-solid fa-wallet"></i> <strong>${t.fee}:</strong> ₹${doc.fee}</div>
-            <div><i class="fa-solid fa-calendar-days"></i> <strong>Days:</strong> ${doc.days || 'Mon-Sat'}</div>
-            <div class="${statusClass} font-semibold">
-              <i class="fa-solid fa-circle-info"></i> <strong>${t.status}:</strong> ${translatedStatus}
+          ${(appt.status !== "Cancelled" && !isPast) ? `
+            <div class="caremate-reminder-actions">
+              <button class="caremate-reminder-btn primary" id="resch-btn-${appt.id}">Reschedule</button>
+              <button class="caremate-reminder-btn danger" id="canc-btn-${appt.id}">Cancel</button>
             </div>
-          </div>
-          <button class="chatbot-doc-btn">${bookBtnLabel}</button>
+          ` : ""}
         `;
 
-        card.querySelector("button").addEventListener("click", () => {
-          this.booking.dept = doc.specialty;
-          this.booking.doctor = doc;
-          this.startBooking(doc.specialty, doc);
-        });
+        if (appt.status !== "Cancelled" && !isPast) {
+          apptCard.querySelector(`#resch-btn-${appt.id}`).addEventListener("click", () => {
+            this.renderMessage(`Reschedule Ref: ${appt.id}`, "user");
+            this.flowData.rescheduleAppt = appt;
+            this.promptRescheduleSlots(appt);
+          });
 
-        this.messagesContainer.appendChild(card);
+          apptCard.querySelector(`#canc-btn-${appt.id}`).addEventListener("click", () => {
+            this.renderMessage(`Cancel Ref: ${appt.id}`, "user");
+            this.executeCancellation(appt);
+          });
+        }
+
+        this.renderMessage(apptCard, "assistant", "widget");
       });
 
-      this.scrollToBottom();
-      this.showMenuButton();
-    }, 700);
-  }
-
-  showDoctorFees() {
-    this.showTyping();
-    setTimeout(() => {
-      this.hideTyping();
-      const feeLabel = this.lang === 'gu' ? "ડોક્ટર પરામર્શ ફી:" : (this.lang === 'hi' ? "डॉक्टर परामर्श शुल्क:" : "Doctor Consultation Fees:");
-      let text = `<strong><i class="fa-solid fa-wallet text-primary"></i> ${feeLabel}</strong><br><br>`;
-      doctors.forEach(doc => {
-        text += `• ${doc.name} (${this.getTranslatedDept(doc.specialty)}): <strong>₹${doc.fee}</strong><br>`;
-      });
-      this.renderMessage(text, "assistant", true);
-      this.showMenuButton();
+      this.state = "idle";
+      this.showMenu();
     }, 500);
   }
 
-  showNavigationMenu() {
+  promptRescheduleSlots(appt) {
+    const allSlots = JSON.parse(localStorage.getItem("phh_slots")) || [];
+    const now = new Date();
+    const availableSlots = allSlots.filter(s => {
+      if (s.doctorId !== appt.doctorId || s.status !== "Available") return false;
+      const dateParts = s.date.split("-");
+      const slotTimeObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+      return slotTimeObj > now;
+    });
+
+    if (availableSlots.length === 0) {
+      this.renderMessage(`No other available slots currently found for Dr. ${appt.doctorName} to reschedule. Please contact reception.`);
+      this.showMenu();
+      return;
+    }
+
+    const uniqueDates = [...new Set(availableSlots.map(s => s.date))].sort();
+
+    this.renderMessage("Choose a new appointment date:");
+    this.suggestionsContainer.innerHTML = "";
+    uniqueDates.forEach(d => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = d;
+      chip.addEventListener("click", () => {
+        this.renderMessage(d, "user");
+        this.promptRescheduleTime(appt, availableSlots.filter(s => s.date === d));
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  promptRescheduleTime(appt, slotsForDate) {
+    this.renderMessage("Select a new time slot:");
+    this.suggestionsContainer.innerHTML = "";
+    slotsForDate.forEach(slot => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = slot.time;
+      chip.addEventListener("click", () => {
+        this.renderMessage(slot.time, "user");
+        this.executeReschedule(appt, slot);
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  executeReschedule(appt, newSlot) {
     this.showTyping();
-    this.state = "nav";
     setTimeout(() => {
       this.hideTyping();
-      this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].nav_facility_prompt);
-      
-      const areas = ["ICU", "Emergency", "Cardiology", "Orthopedics", "Pediatrics", "Gynecology"];
-      const areaIcons = {
-        "ICU": '<i class="fa-solid fa-bed-pulse text-indigo-500"></i>',
-        "Emergency": '<i class="fa-solid fa-truck-medical text-rose-500"></i>',
-        "Cardiology": '<i class="fa-solid fa-heart-pulse text-rose-500"></i>',
-        "Orthopedics": '<i class="fa-solid fa-bone text-amber-600"></i>',
-        "Pediatrics": '<i class="fa-solid fa-baby text-sky-500"></i>',
-        "Gynecology": '<i class="fa-solid fa-venus text-pink-500"></i>'
-      };
 
-      this.suggestionsContainer.innerHTML = "";
-      
-      areas.forEach(area => {
-        const chip = document.createElement("button");
-        chip.className = "chatbot-chip";
-        chip.innerHTML = `${areaIcons[area] || '<i class="fa-solid fa-hospital"></i>'} <span>${area}</span>`;
-        chip.addEventListener("click", () => {
-          this.renderMessage(area, "user");
-          this.showHospitalDirections(area);
-        });
-        this.suggestionsContainer.appendChild(chip);
-      });
-      
-      this.showMenuButton();
+      const allSlots = JSON.parse(localStorage.getItem("phh_slots")) || [];
+      const allAppts = JSON.parse(localStorage.getItem("phh_appointments")) || [];
+
+      const oldSlotIndex = allSlots.findIndex(s => s.bookingId === appt.id || (s.doctorId === appt.doctorId && s.date === appt.date && s.time === (appt.slot || appt.time) && s.status === "Booked"));
+      if (oldSlotIndex !== -1) {
+        allSlots[oldSlotIndex].status = "Available";
+        allSlots[oldSlotIndex].bookingId = null;
+      }
+
+      const newSlotIndex = allSlots.findIndex(s => s.id === newSlot.id);
+      if (newSlotIndex !== -1) {
+        allSlots[newSlotIndex].status = "Booked";
+        allSlots[newSlotIndex].bookingId = appt.id;
+      }
+
+      const apptIndex = allAppts.findIndex(a => a.id === appt.id);
+      if (apptIndex !== -1) {
+        allAppts[apptIndex].date = newSlot.date;
+        allAppts[apptIndex].time = newSlot.time;
+        allAppts[apptIndex].slot = newSlot.time;
+        allAppts[apptIndex].status = "Upcoming";
+        allAppts[apptIndex].rescheduledBy = "patient";
+        allAppts[apptIndex].rescheduledAt = new Date().toISOString();
+      }
+
+      localStorage.setItem("phh_slots", JSON.stringify(allSlots));
+      localStorage.setItem("phh_appointments", JSON.stringify(allAppts));
+      window.dispatchEvent(new Event("storage_local"));
+
+      this.renderMessage(this.translations[this.lang].reschedule_success.replace("{date}", newSlot.date).replace("{time}", newSlot.time));
+      this.state = "idle";
+      this.showMenu();
     }, 500);
+  }
+
+  executeCancellation(appt) {
+    this.showTyping();
+    setTimeout(() => {
+      this.hideTyping();
+
+      const allSlots = JSON.parse(localStorage.getItem("phh_slots")) || [];
+      const allAppts = JSON.parse(localStorage.getItem("phh_appointments")) || [];
+
+      const slotIndex = allSlots.findIndex(s => s.bookingId === appt.id || (s.doctorId === appt.doctorId && s.date === appt.date && s.time === (appt.slot || appt.time) && s.status === "Booked"));
+      if (slotIndex !== -1) {
+        allSlots[slotIndex].status = "Available";
+        allSlots[slotIndex].bookingId = null;
+      }
+
+      const apptIndex = allAppts.findIndex(a => a.id === appt.id);
+      if (apptIndex !== -1) {
+        allAppts[apptIndex].status = "Cancelled";
+      }
+
+      localStorage.setItem("phh_slots", JSON.stringify(allSlots));
+      localStorage.setItem("phh_appointments", JSON.stringify(allAppts));
+      window.dispatchEvent(new Event("storage_local"));
+
+      this.renderMessage(this.translations[this.lang].cancel_success);
+      this.state = "idle";
+      this.showMenu();
+    }, 500);
+  }
+
+  checkUpcomingAppointments(silent = false) {
+    const user = JSON.parse(localStorage.getItem("phh_current_user"));
+    if (!user) return;
+
+    const allAppts = JSON.parse(localStorage.getItem("phh_appointments")) || [];
+    const now = new Date();
+    
+    const reminderAppt = allAppts.find(a => {
+      if (a.status === "Cancelled") return false;
+      const emailMatch = a.patientEmail && user.email && a.patientEmail.toLowerCase() === user.email.toLowerCase();
+      const phoneMatch = a.patientPhone && user.phone && a.patientPhone.replace(/\D/g, "").slice(-10) === user.phone.replace(/\D/g, "").slice(-10);
+      
+      if (emailMatch || phoneMatch) {
+        const dateParts = a.date.split("-");
+        const apptDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+        const timeDiff = apptDate - now.setHours(0,0,0,0);
+        const diffDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 1;
+      }
+      return false;
+    });
+
+    if (reminderAppt && !silent) {
+      this.showReminderCard(reminderAppt);
+    }
+  }
+
+  showReminderCard(appt) {
+    const existingReminder = document.getElementById(`reminder-box-${appt.id}`);
+    if (existingReminder) return;
+
+    this.showTyping();
+    setTimeout(() => {
+      this.hideTyping();
+
+      const reminderCard = document.createElement("div");
+      reminderCard.className = "caremate-reminder-box";
+      reminderCard.id = `reminder-box-${appt.id}`;
+      reminderCard.innerHTML = `
+        <div class="caremate-reminder-header">
+          <i class="fa-solid fa-bell-ring fa-bounce"></i>
+          <span>Upcoming Appointment Alert</span>
+        </div>
+        <div class="caremate-reminder-content">
+          You have an upcoming consultation booked with <strong>Dr. ${appt.doctorName}</strong> scheduled for <strong>${appt.date}</strong> at <strong>${appt.slot || appt.time}</strong>.
+        </div>
+        <div class="caremate-reminder-actions">
+          <button class="caremate-reminder-btn primary" id="rem-ok-${appt.id}">
+            Confirm/View
+          </button>
+          <button class="caremate-reminder-btn secondary" id="rem-resch-${appt.id}">
+            Reschedule
+          </button>
+          <button class="caremate-reminder-btn danger" id="rem-canc-${appt.id}">
+            Cancel Slot
+          </button>
+        </div>
+      `;
+
+      reminderCard.querySelector(`#rem-ok-${appt.id}`).addEventListener("click", () => {
+        this.renderMessage("Confirm Appointment", "user");
+        this.renderMessage(`Your appointment for ${appt.date} is confirmed. We look forward to seeing you.`, "assistant");
+        this.showMenu();
+      });
+
+      reminderCard.querySelector(`#rem-resch-${appt.id}`).addEventListener("click", () => {
+        this.renderMessage("Reschedule Appointment Reminder", "user");
+        this.promptRescheduleSlots(appt);
+      });
+
+      reminderCard.querySelector(`#rem-canc-${appt.id}`).addEventListener("click", () => {
+        this.renderMessage("Cancel Appointment Reminder", "user");
+        this.executeCancellation(appt);
+      });
+
+      this.renderMessage(reminderCard, "assistant", "widget");
+    }, 600);
+  }
+
+  startDirectionsQuery() {
+    this.renderMessage("Which department or area in Palanpur Health Hub are you trying to locate?");
+    this.suggestionsContainer.innerHTML = "";
+    const facilities = ["General Medicine", "Cardiology", "Neurology", "Pulmonology", "Orthopedics", "ICU", "Emergency", "Pharmacy"];
+    facilities.forEach(fac => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = fac;
+      chip.addEventListener("click", () => {
+        this.renderMessage(fac, "user");
+        this.showHospitalDirections(fac);
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
   }
 
   showHospitalDirections(facility) {
     this.showTyping();
     setTimeout(() => {
       this.hideTyping();
+      const directions = HOSPITAL_DIRECTIONS[this.lang] || HOSPITAL_DIRECTIONS["en"];
+      const matchedText = directions[facility] || directions["General Medicine"];
       
-      const directions = HOSPITAL_DIRECTIONS[this.lang][facility] || HOSPITAL_DIRECTIONS[this.lang]["General Medicine"];
-      const msg = CHATBOT_TRANSLATIONS[this.lang].nav_directions
-        .replace("{facility}", facility)
-        .replace("{directions}", directions);
-      
-      this.renderMessage(msg, "assistant", true);
-      this.showMenuButton();
-    }, 600);
+      const responseText = `
+        📍 **Location Directions: ${facility}**<br><br>
+        ${matchedText}
+      `;
+      this.renderMessage(responseText);
+      this.showMenu();
+    }, 450);
   }
 
-  startBooking(preselectedDept = "", preselectedDoc = null) {
-    this.booking = {
-      name: currentUser ? currentUser.name : "",
-      dept: preselectedDept,
-      doctor: preselectedDoc,
-      date: "",
-      slot: "",
-      symptoms: ""
-    };
-    
-    this.state = "booking";
-    
-    if (!this.booking.name) {
-      this.bookingFlowStep("name");
-    } else if (!this.booking.dept) {
-      this.bookingFlowStep("dept");
-    } else if (!this.booking.doctor) {
-      this.bookingFlowStep("doctor");
-    } else {
-      this.bookingFlowStep("date");
+  checkForPendingReviews() {
+    const user = JSON.parse(localStorage.getItem("phh_current_user"));
+    if (!user) return;
+
+    const allAppts = JSON.parse(localStorage.getItem("phh_appointments")) || [];
+    const allReviews = JSON.parse(localStorage.getItem("phh_reviews")) || [];
+
+    const nowStr = new Date().toISOString().split("T")[0];
+    const unreviewedAppt = allAppts.find(a => {
+      if (a.status === "Cancelled") return false;
+      const emailMatch = a.patientEmail && user.email && a.patientEmail.toLowerCase() === user.email.toLowerCase();
+      const phoneMatch = a.patientPhone && user.phone && a.patientPhone.replace(/\D/g, "").slice(-10) === user.phone.replace(/\D/g, "").slice(-10);
+      
+      if (emailMatch || phoneMatch) {
+        const isPast = a.date < nowStr;
+        if (!isPast) return false;
+
+        const reviewed = allReviews.some(r => r.appointmentId === a.id || r.appointment_id === a.id);
+        return !reviewed;
+      }
+      return false;
+    });
+
+    if (unreviewedAppt) {
+      this.promptAppointmentFeedback(unreviewedAppt);
     }
   }
 
-  bookingFlowStep(step) {
+  promptAppointmentFeedback(appt) {
     this.showTyping();
-    this.suggestionsContainer.innerHTML = "";
-
     setTimeout(() => {
       this.hideTyping();
 
-      if (step === "name") {
-        this.state = "booking_name";
-        this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].booking_step_name);
-        
-        // Prefill option if user is logged in
-        if (currentUser) {
-          const chip = document.createElement("button");
-          chip.className = "chatbot-chip";
-          chip.innerHTML = `<i class="fa-solid fa-user"></i> <span>${currentUser.name}</span>`;
-          chip.addEventListener("click", () => {
-            this.renderMessage(currentUser.name, "user");
-            this.booking.name = currentUser.name;
-            this.bookingFlowStep("dept");
-          });
-          this.suggestionsContainer.appendChild(chip);
-        }
-      } 
+      const card = document.createElement("div");
+      card.className = "caremate-feedback-card";
       
-      else if (step === "dept") {
-        this.state = "booking_dept";
-        const msg = CHATBOT_TRANSLATIONS[this.lang].booking_step_dept.replace("{name}", this.booking.name);
-        this.renderMessage(msg);
-        
-        // Fetch departments dynamically
-        const depts = JSON.parse(localStorage.getItem("phh_departments")) || [
-          { name: "General Medicine" }, { name: "Cardiology" }, { name: "Neurology" },
-          { name: "Pulmonology" }, { name: "Orthopedics" }, { name: "Gynecology" },
-          { name: "Pediatrics" }, { name: "Dermatology" }, { name: "ENT" }, { name: "Psychology" }
-        ];
+      let ratingSelected = 5;
 
-        depts.forEach(d => {
-          const chip = document.createElement("button");
-          chip.className = "chatbot-chip";
-          chip.innerHTML = `<i class="fa-solid fa-stethoscope text-primary"></i> <span>${this.getTranslatedDept(d.name)}</span>`;
-          chip.addEventListener("click", () => {
-            this.renderMessage(this.getTranslatedDept(d.name), "user");
-            this.booking.dept = d.name;
-            this.bookingFlowStep("doctor");
+      card.innerHTML = `
+        <div style="font-size:0.82rem; font-weight:700; margin-bottom:6px;">
+          ${this.translations[this.lang].ask_feedback.replace("{doctor}", appt.doctorName)}
+        </div>
+        <div class="caremate-stars-wrapper">
+          <button class="caremate-star-btn active" data-rating="1">\u2605</button>
+          <button class="caremate-star-btn active" data-rating="2">\u2605</button>
+          <button class="caremate-star-btn active" data-rating="3">\u2605</button>
+          <button class="caremate-star-btn active" data-rating="4">\u2605</button>
+          <button class="caremate-star-btn active" data-rating="5">\u2605</button>
+        </div>
+        <textarea class="caremate-feedback-textarea" placeholder="${this.translations[this.lang].feedback_placeholder}"></textarea>
+        <button class="caremate-feedback-submit" id="feedback-submit-btn">
+          ${this.translations[this.lang].submit_feedback}
+        </button>
+      `;
+
+      const stars = card.querySelectorAll(".caremate-star-btn");
+      stars.forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          ratingSelected = parseInt(btn.getAttribute("data-rating"));
+          stars.forEach(s => {
+            const r = parseInt(s.getAttribute("data-rating"));
+            if (r <= ratingSelected) {
+              s.classList.add("active");
+            } else {
+              s.classList.remove("active");
+            }
           });
-          this.suggestionsContainer.appendChild(chip);
         });
-      } 
-      
-      else if (step === "doctor") {
-        this.state = "booking_doc";
-        this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].booking_step_doc);
-        
-        const filteredDocs = doctors.filter(d => d.specialty === this.booking.dept);
-        if (filteredDocs.length === 0) {
-          const noDocsMsg = this.lang === 'gu' ? "આ વિભાગમાં કોઈ ડોકટરો ઉપલબ્ધ નથી." : (this.lang === 'hi' ? "इस विभाग में कोई डॉक्टर उपलब्ध नहीं हैं।" : "No specialists are available in this department.");
-          this.renderMessage(noDocsMsg);
-          this.showMenu();
-          return;
-        }
+      });
 
-        filteredDocs.forEach(doc => {
-          const chip = document.createElement("button");
-          chip.className = "chatbot-chip";
-          chip.innerHTML = `<i class="fa-solid fa-user-doctor text-primary"></i> <span>${doc.name}</span>`;
-          chip.addEventListener("click", () => {
-            this.renderMessage(doc.name, "user");
-            this.booking.doctor = doc;
-            this.bookingFlowStep("date");
-          });
-          this.suggestionsContainer.appendChild(chip);
-        });
-      } 
-      
-      else if (step === "date") {
-        this.state = "booking_date";
-        this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].booking_step_date);
-        
-        // Load available slots dynamically from local sync
-        const now = new Date();
-        const availableSlots = slots.filter(s => {
-          if (s.doctorId !== this.booking.doctor.id || s.status !== "Available") return false;
-          const slotTimeObj = parseSlotEndDateTime(s.date, s.time);
-          return slotTimeObj > now;
-        });
+      card.querySelector("#feedback-submit-btn").addEventListener("click", () => {
+        const reviewText = card.querySelector(".caremate-feedback-textarea").value.trim();
+        this.submitReview(appt, ratingSelected, reviewText);
+      });
 
-        if (availableSlots.length === 0) {
-          this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].no_slots_available);
-          this.showMenu();
-          return;
-        }
-
-        const uniqueDates = [...new Set(availableSlots.map(s => s.date))].sort();
-        uniqueDates.forEach(d => {
-          const chip = document.createElement("button");
-          chip.className = "chatbot-chip";
-          chip.innerHTML = `<i class="fa-solid fa-calendar-day"></i> <span>${d}</span>`;
-          chip.addEventListener("click", () => {
-            this.renderMessage(d, "user");
-            this.booking.date = d;
-            this.bookingFlowStep("slot");
-          });
-          this.suggestionsContainer.appendChild(chip);
-        });
-      } 
-      
-      else if (step === "slot") {
-        this.state = "booking_slot";
-        this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].booking_step_slot);
-
-        // Fetch slots for this doctor and chosen date
-        const slotRecord = slots.find(s => s.doctorId === this.booking.doctor.id && s.date === this.booking.date && s.status === "Available");
-        if (!slotRecord || !slotRecord.time) {
-          this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].no_slots_available);
-          this.showMenu();
-          return;
-        }
-
-        // Split multiple times (comma-separated or single)
-        const times = slotRecord.time.split(',').map(t => t.trim());
-        times.forEach(timeVal => {
-          const chip = document.createElement("button");
-          chip.className = "chatbot-chip";
-          chip.innerHTML = `<i class="fa-solid fa-clock"></i> <span>${timeVal}</span>`;
-          chip.addEventListener("click", () => {
-            this.renderMessage(timeVal, "user");
-            this.booking.slot = timeVal;
-            this.bookingFlowStep("symptoms");
-          });
-          this.suggestionsContainer.appendChild(chip);
-        });
-      } 
-      
-      else if (step === "symptoms") {
-        this.state = "booking_symptoms";
-        this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].booking_step_symptoms);
-        
-        // common suggestions with icons
-        const symOptions = {
-          en: [
-            { text: "General Checkup", icon: '<i class="fa-solid fa-stethoscope"></i>' },
-            { text: "Cough/Fever", icon: '<i class="fa-solid fa-temperature-high text-orange-500"></i>' },
-            { text: "Routine Review", icon: '<i class="fa-solid fa-clipboard-check text-emerald-500"></i>' },
-            { text: "Pain consultation", icon: '<i class="fa-solid fa-hand-holding-medical text-amber-500"></i>' }
-          ],
-          gu: [
-            { text: "સામાન્ય તપાસ", icon: '<i class="fa-solid fa-stethoscope"></i>' },
-            { text: "તાવ/ઉધરસ", icon: '<i class="fa-solid fa-temperature-high text-orange-500"></i>' },
-            { text: "નિયમિત ચેકઅપ", icon: '<i class="fa-solid fa-clipboard-check text-emerald-500"></i>' },
-            { text: "દુખાવાની સલાહ", icon: '<i class="fa-solid fa-hand-holding-medical text-amber-500"></i>' }
-          ],
-          hi: [
-            { text: "सामान्य जांच", icon: '<i class="fa-solid fa-stethoscope"></i>' },
-            { text: "बुखार/खांसी", icon: '<i class="fa-solid fa-temperature-high text-orange-500"></i>' },
-            { text: "नियमित जांच", icon: '<i class="fa-solid fa-clipboard-check text-emerald-500"></i>' },
-            { text: "दर्द परामर्श", icon: '<i class="fa-solid fa-hand-holding-medical text-amber-500"></i>' }
-          ]
-        };
-
-        symOptions[this.lang].forEach(so => {
-          const chip = document.createElement("button");
-          chip.className = "chatbot-chip";
-          chip.innerHTML = `${so.icon} <span>${so.text}</span>`;
-          chip.addEventListener("click", () => {
-            this.renderMessage(so.text, "user");
-            this.booking.symptoms = so.text;
-            this.bookingFlowStep("summary");
-          });
-          this.suggestionsContainer.appendChild(chip);
-        });
-      } 
-      
-      else if (step === "summary") {
-        this.state = "booking_confirm";
-        this.suggestionsContainer.innerHTML = "";
-        
-        const card = document.createElement("div");
-        card.className = "chatbot-card chatbot-booking-card";
-        
-        const detailsText = CHATBOT_TRANSLATIONS[this.lang].booking_summary
-          .replace("{name}", this.booking.name)
-          .replace("{doc}", this.booking.doctor.name)
-          .replace("{dept}", this.getTranslatedDept(this.booking.dept))
-          .replace("{date}", this.booking.date)
-          .replace("{slot}", this.booking.slot)
-          .replace("{fee}", this.booking.doctor.fee);
-
-        card.innerHTML = `
-          <div class="chatbot-booking-title">${CHATBOT_TRANSLATIONS[this.lang].booking_summary_title}</div>
-          <div class="chatbot-booking-details">${detailsText}</div>
-          <button class="chatbot-booking-pay-btn">${CHATBOT_TRANSLATIONS[this.lang].btn_pay_confirm}</button>
-        `;
-
-        card.querySelector("button").addEventListener("click", () => {
-          this.launchPayment();
-        });
-
-        this.messagesContainer.appendChild(card);
-        this.scrollToBottom();
-      }
+      this.renderMessage(card, "assistant", "widget");
     }, 600);
   }
 
-  launchPayment() {
+  submitReview(appt, rating, reviewText) {
     this.showTyping();
-    this.suggestionsContainer.innerHTML = "";
+    setTimeout(() => {
+      this.hideTyping();
 
-    const apptData = {
-      name: this.booking.name,
-      phone: currentUser ? currentUser.phone : "9999988888",
-      email: currentUser ? currentUser.email : "patient@chatbot.com",
-      dept: this.booking.dept,
-      docId: this.booking.doctor.id,
-      date: this.booking.date,
-      slot: this.booking.slot,
-      symptoms: this.booking.symptoms || "Booked via assistant chatbot"
+      const allReviews = JSON.parse(localStorage.getItem("phh_reviews")) || [];
+      const newReview = {
+        appointmentId: appt.id,
+        doctorId: appt.doctorId,
+        patientName: appt.patientName || "Guest Patient",
+        rating: rating,
+        review: reviewText || "No written review comments provided.",
+        created_at: new Date().toISOString()
+      };
+
+      allReviews.push(newReview);
+      localStorage.setItem("phh_reviews", JSON.stringify(allReviews));
+      
+      window.dispatchEvent(new Event("storage_local"));
+
+      this.renderMessage(this.translations[this.lang].feedback_success);
+      this.state = "idle";
+      this.showMenu();
+    }, 500);
+  }
+
+  startFaqSearch() {
+    this.state = "faq_search";
+    const faqPrompt = this.lang === 'gu' ? String.fromCodePoint(...[2730,2750,2738,2750,2734,2752,32,2744,2750,2736,2752,2724,2750,32,2738,2709,2765,2743,2723,2763,32,2730,2754,2715,2763,58]) : (this.lang === 'hi' ? String.fromCodePoint(...[2360,2366,2350,2366,2344,2381,2351,32,2360,2357,2366,2354,2367,2325,32,2346,2381,2352,2368,2350,2375,2306,32,2346,2381,2352,2369,2332,2375,2306,58]) : "Ask us a general hospital query (e.g. 'What are the visiting hours?'):");
+    this.renderMessage(faqPrompt);
+    this.suggestionsContainer.innerHTML = "";
+  }
+
+  handleFaqSearchQuery(text) {
+    this.showTyping();
+    setTimeout(() => {
+      this.hideTyping();
+      const answer = this.matchFaqText(text);
+      if (answer) {
+        this.renderMessage(answer);
+      } else {
+        const notFound = this.lang === 'gu' 
+          ? String.fromCodePoint(...[2745,2753,2690,32,2724,2734,2752,32,2716,2759,32,2741,2751,2742,2750,2736,2750,32,2709,2750,2736,2751,2709,32,2734,2725,2752,32,2730,2754,2715,2763,32,2736,2725,2752,46])
+          : (this.lang === 'hi' ? String.fromCodePoint(...[2350,2369,2332,2375,32,2311,2360,2325,2375,32,2348,2366,2352,2375,32,2350,2375,2306,32,2325,2379,2311,32,2332,2366,2344,2325,2366,2352,2368,32,2344,2361,2368,2306,32,2350,2367,2354,2368,2404]) : "I couldn't find an exact answer for that query in our database. Please try another administrative question.");
+        this.renderMessage(notFound);
+      }
+      this.state = "idle";
+      this.showMenu();
+    }, 500);
+  }
+
+  matchFaqText(text) {
+    const raw = text.toLowerCase();
+    
+    const faqData = {
+      en: [
+        { q: ["opd", "timings", "hours"], a: "General OPD clinics are open **Monday to Saturday, 9:00 AM to 6:00 PM**. Emergency operations are open 24/7." },
+        { q: ["visit", "visiting", "hours", "patient"], a: "Visiting hours for patient wards are daily from **4:00 PM to 7:00 PM**. Only one visitor card is allowed per patient." },
+        { q: ["parking", "vehicle", "car"], a: "Yes, free secure 2-wheeler and 4-wheeler parking is available inside the hospital premises 24/7." },
+        { q: ["insurance", "claims", "cashless", "tpa"], a: "We support cashless treatment options with all major TPAs and insurance providers including Star Health, HDFC Ergo, ICICI Lombard, and Niva Bupa." },
+        { q: ["pharmacy", "medicine"], a: "Our in-house Pharmacy is located on the **Ground Floor, Building A** next to reception and operates 24 hours daily." }
+      ],
+      gu: [
+        { q: ["opd", "સમય", "કલાકો"], a: String.fromCodePoint(...[2716,2759,2728,2751,2709,32,2734,2750,2736,2752,32,2744,2750,2736,2750,2736,2751,2725,2709,2750,32,2716,2759,2728,2751,2709,32,2709,2750,2736,2750,2736,2751,2725,2709,2750,32,2726,2751,2742,2750,2728,2750,2709,32,2693,2728,2759,32,2744,2751,2709,2750,2725,2709,2750,32,2734,2739,2752,32,2715,2759,46]) },
+        { q: ["મુલાકાત", "સમય", "દર્દી"], a: String.fromCodePoint(...[2726,2751,2742,2750,2728,2750,2709,32,2734,2739,2752,32,2738,2750,2736,2750,2736,2751,2725,2709,2750,32,2744,2750,2736,2741,2750,2736,32,2715,2752,46]) },
+        { q: ["પાર્કિંગ", "વાહન"], a: String.fromCodePoint(...[2745,2753,2690,44,32,2744,2750,2725,2752,32,2736,2752,2724,2759,32,2734,2726,2726,32,2738,2715,2741,2750,2736,32,2738,2710,2763,32,2732,2753,2709,2751,2690,2711,32,2715,2759,46]) }
+      ],
+      hi: [
+        { q: ["opd", "समय", "घंटे"], a: "सामान्य OPD क्लीनिक **सोमवार से शनिवार, सुबह 9:00 बजे से शाम 6:00 बजे** तक कार्यरत रहते हैं।" },
+        { q: ["मुलाकात", "समय", "मरीज"], a: "वार्डों में मरीजों से मिलने का समय **शाम 4:00 से 7:00 बजे** तक है।" }
+      ]
     };
 
-    window.launchRazorpayPayment(apptData)
-      .then(newAppt => {
-        this.hideTyping();
-        
-        const successMsg = CHATBOT_TRANSLATIONS[this.lang].booking_success.replace("{id}", newAppt.id);
-        this.renderMessage(successMsg, "assistant");
-        
-        this.state = "idle";
-        this.showMenuButton();
-      })
-      .catch(err => {
-        this.hideTyping();
-        const failMsg = CHATBOT_TRANSLATIONS[this.lang].booking_fail.replace("{error}", err ? (err.message || "Payment cancelled") : "Payment cancelled");
-        this.renderMessage(failMsg, "assistant");
-        
-        this.state = "idle";
-        this.showMenuButton();
-      });
+    const currentFaqList = faqData[this.lang] || faqData["en"];
+    const matched = currentFaqList.find(item => item.q.some(keyword => raw.includes(keyword)));
+    return matched ? matched.a : null;
   }
 
-  showHealthTips() {
-    this.showTyping();
-    setTimeout(() => {
-      this.hideTyping();
-      
-      const tipsList = HEALTH_TIPS[this.lang];
-      const randomIndex = Math.floor(Math.random() * tipsList.length);
-      const randomTip = tipsList[randomIndex];
-      
-      const card = document.createElement("div");
-      card.className = "chatbot-card";
-      card.innerHTML = `
-        <h4 style="font-weight: 700; color: var(--primary); font-size: 0.88rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-          <i class="fa-solid fa-heart-pulse text-rose-500"></i> ${CHATBOT_TRANSLATIONS[this.lang].health_tips_title}
-        </h4>
-        <p style="font-size: 0.84rem; line-height: 1.45; color: var(--text-secondary); margin: 0;">
-          ${randomTip}
-        </p>
-      `;
-      
-      this.messagesContainer.appendChild(card);
-      this.scrollToBottom();
-      this.showMenuButton();
-    }, 500);
-  }
-
-  startQuiz() {
-    this.showTyping();
-    this.state = "quiz";
-    this.quiz.currentQuestion = 0;
-    this.quiz.score = 0;
-
-    setTimeout(() => {
-      this.hideTyping();
-      this.renderMessage(CHATBOT_TRANSLATIONS[this.lang].quiz_welcome);
-      
-      this.suggestionsContainer.innerHTML = "";
-      const startBtn = document.createElement("button");
-      startBtn.className = "chatbot-chip";
-      startBtn.innerHTML = `<i class="fa-solid fa-play text-emerald-500"></i> <span>${CHATBOT_TRANSLATIONS[this.lang].quiz_ready_btn}</span>`;
-      startBtn.addEventListener("click", () => {
-        this.renderQuizQuestion();
-      });
-      this.suggestionsContainer.appendChild(startBtn);
-      
-      const cancelBtn = document.createElement("button");
-      cancelBtn.className = "chatbot-chip";
-      cancelBtn.innerHTML = `<i class="fa-solid fa-xmark text-rose-500"></i> <span>${this.lang === 'gu' ? "રદ કરો" : (this.lang === 'hi' ? "रद्द करें" : "Cancel")}</span>`;
-      cancelBtn.addEventListener("click", () => this.showMenu());
-      this.suggestionsContainer.appendChild(cancelBtn);
-    }, 600);
-  }
-
-  renderQuizQuestion() {
-    this.showTyping();
+  startHealthToolsMenu() {
+    this.renderMessage("Which health calculator or screening tool would you like to run today?");
     this.suggestionsContainer.innerHTML = "";
     
-    setTimeout(() => {
-      this.hideTyping();
-      
-      const questionsList = HEALTH_QUIZ[this.lang];
-      const qObj = questionsList[this.quiz.currentQuestion];
-      
-      const card = document.createElement("div");
-      card.className = "chatbot-card chatbot-quiz-card";
-      
-      let optionsHtml = "";
-      qObj.o.forEach((opt, idx) => {
-        optionsHtml += `<button class="chatbot-quiz-opt-btn" data-index="${idx}">${opt}</button>`;
+    const tools = [
+      { name: "🧮 BMI Calculator", action: () => this.startBmiCalc() },
+      { name: "💧 Water Intake Calculator", action: () => this.startWaterCalc() },
+      { name: "❤️ Heart Risk Assessment", action: () => this.startHeartRisk() },
+      { name: "🧬 Diabetes Risk Assessment", action: () => this.startDiabetesRisk() },
+      { name: "🤰 Pregnancy Due Date", action: () => this.startPregnancyCalc() }
+    ];
+
+    tools.forEach(t => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = t.name;
+      chip.addEventListener("click", () => {
+        this.renderMessage(t.name, "user");
+        t.action();
       });
-
-      const qLabel = this.lang === 'gu' ? "પ્રશ્ન" : (this.lang === 'hi' ? "प्रश्न" : "Question");
-      const ofLabel = this.lang === 'gu' ? "માંથી" : (this.lang === 'hi' ? "में से" : "of");
-
-      card.innerHTML = `
-        <div class="chatbot-quiz-title">${qLabel} ${this.quiz.currentQuestion + 1} ${ofLabel} 3:</div>
-        <p style="font-size:0.86rem; font-weight:600; color:var(--dark); margin:6px 0;">${qObj.q}</p>
-        <div class="chatbot-quiz-options">${optionsHtml}</div>
-      `;
-
-      card.querySelectorAll(".chatbot-quiz-opt-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-          const selectedIdx = parseInt(e.target.getAttribute("data-index"));
-          this.handleQuizAnswer(selectedIdx, qObj);
-        });
-      });
-
-      this.messagesContainer.appendChild(card);
-      this.scrollToBottom();
-    }, 500);
+      this.suggestionsContainer.appendChild(chip);
+    });
   }
 
-  handleQuizAnswer(selectedIndex, qObj) {
+  startBmiCalc() {
+    this.state = "calc_bmi_weight";
+    this.flowData = {};
+    this.renderMessage("Let's calculate your BMI. First, what is your weight in kilograms (kg)?");
+    this.suggestionsContainer.innerHTML = "";
+  }
+
+  handleBmiWeight(w) {
+    const num = parseFloat(w);
+    if (isNaN(num) || num <= 10 || num > 300) {
+      this.renderMessage("Please enter a valid weight in kilograms (e.g. 70):");
+      return;
+    }
+    this.flowData.weight = num;
+    this.state = "calc_bmi_height";
+    this.renderMessage("Great. Next, what is your height in centimeters (cm)?");
+  }
+
+  handleBmiHeight(h) {
+    const num = parseFloat(h);
+    if (isNaN(num) || num <= 50 || num > 250) {
+      this.renderMessage("Please enter a valid height in centimeters (e.g. 175):");
+      return;
+    }
+    this.flowData.height = num;
+    this.calculateBmiResult();
+  }
+
+  calculateBmiResult() {
     this.showTyping();
     setTimeout(() => {
       this.hideTyping();
+      const weight = this.flowData.weight;
+      const heightM = this.flowData.height / 100;
+      const bmi = (weight / (heightM * heightM)).toFixed(1);
       
-      const isCorrect = selectedIndex === qObj.a;
-      if (isCorrect) {
-        this.quiz.score++;
+      let category = "Normal weight";
+      let interpretation = "Your BMI falls in the healthy weight range. Keep maintaining your lifestyle!";
+      let suggestSpecialist = false;
+
+      if (bmi < 18.5) {
+        category = "Underweight";
+        interpretation = "You are in the underweight range. We recommend speaking with a clinical nutritionist to guide a weight-gain diet plan.";
+        suggestSpecialist = true;
+      } else if (bmi >= 25 && bmi < 29.9) {
+        category = "Overweight";
+        interpretation = "You are in the overweight range. Consider balanced nutrition intake and regular physical activity.";
+      } else if (bmi >= 30) {
+        category = "Obesity";
+        interpretation = "Your BMI indicates obesity. We recommend consulting a dietitian or endocrinologist for a healthy weight loss roadmap.";
+        suggestSpecialist = true;
       }
 
-      this.renderMessage(qObj.r);
-
-      this.quiz.currentQuestion++;
-      const questionsList = HEALTH_QUIZ[this.lang];
+      const responseText = `
+        🧮 **CareMate AI - BMI Report**<br><br>
+        • Weight: **${weight} kg**<br>
+        • Height: **${this.flowData.height} cm**<br>
+        • Calculated BMI: **${bmi}**<br>
+        • Category: **${category}**<br><br>
+        *Interpretation:* ${interpretation}
+      `;
+      this.renderMessage(responseText);
       
-      if (this.quiz.currentQuestion < questionsList.length) {
-        this.renderQuizQuestion();
-      } else {
-        // Quiz completed
-        this.showTyping();
-        setTimeout(() => {
-          this.hideTyping();
-          const scoreMsg = this.lang === 'gu' 
-            ? `ક્વિઝ પૂર્ણ! તમારો સ્કોર: **${this.quiz.score}/3**.`
-            : (this.lang === 'hi' ? `क्विज़ पूरा हुआ! आपका स्कोर: **${this.quiz.score}/3**।` : `Quiz complete! Your score: **${this.quiz.score}/3**.`);
-          this.renderMessage(scoreMsg);
+      if (suggestSpecialist) {
+        this.renderMessage("Would you like me to recommend clinical specialists for personalized advice?");
+        this.suggestionsContainer.innerHTML = "";
+        const yesChip = document.createElement("button");
+        yesChip.className = "chatbot-chip";
+        yesChip.textContent = "Yes, recommend doctors";
+        yesChip.addEventListener("click", () => {
+          this.renderMessage("Yes, recommend doctors", "user");
+          this.rankDoctors("General Medicine");
+        });
+        const noChip = document.createElement("button");
+        noChip.className = "chatbot-chip";
+        noChip.textContent = "No thanks";
+        noChip.addEventListener("click", () => {
+          this.renderMessage("No thanks", "user");
           this.state = "idle";
-          this.showMenuButton();
-        }, 500);
+          this.showMenu();
+        });
+        this.suggestionsContainer.appendChild(yesChip);
+        this.suggestionsContainer.appendChild(noChip);
+      } else {
+        this.state = "idle";
+        this.showMenu();
       }
-    }, 600);
+    }, 500);
+  }
+
+  startWaterCalc() {
+    this.state = "calc_water_weight";
+    this.flowData = {};
+    this.renderMessage("Let's calculate your daily hydration target. First, enter your weight in kg:");
+    this.suggestionsContainer.innerHTML = "";
+  }
+
+  handleWaterWeight(w) {
+    const num = parseFloat(w);
+    if (isNaN(num) || num <= 10 || num > 300) {
+      this.renderMessage("Please enter a valid weight in kg:");
+      return;
+    }
+    this.flowData.weight = num;
+    this.state = "calc_water_activity";
+    this.renderMessage("Select your daily physical activity level:");
+    this.suggestionsContainer.innerHTML = "";
+    
+    const levels = ["Sedentary", "Moderate", "Highly Active"];
+    levels.forEach(lvl => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = lvl;
+      chip.addEventListener("click", () => {
+        this.renderMessage(lvl, "user");
+        this.handleWaterActivity(lvl);
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  handleWaterActivity(lvl) {
+    this.flowData.activity = lvl;
+    this.calculateWaterResult();
+  }
+
+  calculateWaterResult() {
+    this.showTyping();
+    setTimeout(() => {
+      this.hideTyping();
+      const weight = this.flowData.weight;
+      let baseMl = weight * 35;
+      
+      if (this.flowData.activity === "Moderate") {
+        baseMl += 500;
+      } else if (this.flowData.activity === "Highly Active") {
+        baseMl += 1000;
+      }
+
+      const liters = (baseMl / 1000).toFixed(1);
+      const glasses = Math.ceil(baseMl / 250);
+
+      const responseText = `
+        💧 **Daily Water Intake Recommendation**<br><br>
+        • Daily Fluid Target: **${liters} Liters** (approx. **${glasses} glasses**)<br>
+        • Weight factor: ${weight} kg<br>
+        • Activity: ${this.flowData.activity}<br><br>
+        *Tip: Try drinking a glass of water first thing in the morning to start your hydration goals!*
+      `;
+      this.renderMessage(responseText);
+      this.state = "idle";
+      this.showMenu();
+    }, 500);
+  }
+
+  startHeartRisk() {
+    this.state = "calc_heart_age";
+    this.flowData = { points: 0 };
+    this.renderMessage("Let's start your Heart Risk Assessment. What is your age?");
+    this.suggestionsContainer.innerHTML = "";
+  }
+
+  handleHeartAge(age) {
+    const num = parseInt(age);
+    if (isNaN(num) || num <= 0 || num > 120) {
+      this.renderMessage("Please enter a valid age:");
+      return;
+    }
+    this.flowData.age = num;
+    if (num > 55) this.flowData.points += 2;
+    else if (num > 40) this.flowData.points += 1;
+
+    this.state = "calc_heart_bp";
+    this.renderMessage("Do you have diagnosed High Blood Pressure (Hypertension)?");
+    this.suggestionsContainer.innerHTML = "";
+    
+    const options = ["Yes", "No"];
+    options.forEach(opt => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = opt;
+      chip.addEventListener("click", () => {
+        this.renderMessage(opt, "user");
+        this.handleHeartBp(opt);
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  handleHeartBp(opt) {
+    if (opt === "Yes") this.flowData.points += 2;
+    this.state = "calc_heart_smoking";
+    this.renderMessage("Do you smoke tobacco regularly?");
+    this.suggestionsContainer.innerHTML = "";
+
+    const options = ["Yes", "No"];
+    options.forEach(opt => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = opt;
+      chip.addEventListener("click", () => {
+        this.renderMessage(opt, "user");
+        this.handleHeartSmoking(opt);
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  handleHeartSmoking(opt) {
+    if (opt === "Yes") this.flowData.points += 2;
+    this.state = "calc_heart_family";
+    this.renderMessage("Do you have a direct family history of early heart disease?");
+    this.suggestionsContainer.innerHTML = "";
+
+    const options = ["Yes", "No"];
+    options.forEach(opt => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = opt;
+      chip.addEventListener("click", () => {
+        this.renderMessage(opt, "user");
+        this.handleHeartFamily(opt);
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  handleHeartFamily(opt) {
+    if (opt === "Yes") this.flowData.points += 1;
+    this.calculateHeartResult();
+  }
+
+  calculateHeartResult() {
+    this.showTyping();
+    setTimeout(() => {
+      this.hideTyping();
+      const pts = this.flowData.points;
+      let risk = "Low Risk";
+      let interpretation = "Your answers indicate a low risk profile for heart diseases. Maintain a balanced diet, exercise weekly, and avoid smoking.";
+      let recommendCardio = false;
+
+      if (pts >= 5) {
+        risk = "High Risk";
+        interpretation = "Your answers indicate a high risk profile. We strongly advise booking a cardiac screening consultation with our Cardiology department.";
+        recommendCardio = true;
+      } else if (pts >= 3) {
+        risk = "Moderate Risk";
+        interpretation = "You have a moderate risk profile. Consider monitoring your blood pressure monthly and modifying nutritional intake.";
+        recommendCardio = true;
+      }
+
+      const responseText = `
+        ❤️ **Heart Risk Screening Report**<br><br>
+        • Risk Level: **${risk}** (Score: ${pts})<br><br>
+        *Guideline:* ${interpretation}
+      `;
+      this.renderMessage(responseText);
+
+      if (recommendCardio) {
+        this.renderMessage("Would you like to review Cardiologist doctors schedules to consult?");
+        this.suggestionsContainer.innerHTML = "";
+        const yesChip = document.createElement("button");
+        yesChip.className = "chatbot-chip";
+        yesChip.textContent = "Yes, show Cardiologists";
+        yesChip.addEventListener("click", () => {
+          this.renderMessage("Yes, show Cardiologists", "user");
+          this.rankDoctors("Cardiology");
+        });
+        const noChip = document.createElement("button");
+        noChip.className = "chatbot-chip";
+        noChip.textContent = "No thanks";
+        noChip.addEventListener("click", () => {
+          this.renderMessage("No thanks", "user");
+          this.state = "idle";
+          this.showMenu();
+        });
+        this.suggestionsContainer.appendChild(yesChip);
+        this.suggestionsContainer.appendChild(noChip);
+      } else {
+        this.state = "idle";
+        this.showMenu();
+      }
+    }, 500);
+  }
+
+  startDiabetesRisk() {
+    this.state = "calc_diabetes_age";
+    this.flowData = { points: 0 };
+    this.renderMessage("Let's assess your Diabetes Risk. What is your age?");
+    this.suggestionsContainer.innerHTML = "";
+  }
+
+  handleDiabetesAge(age) {
+    const num = parseInt(age);
+    if (isNaN(num) || num <= 0 || num > 120) {
+      this.renderMessage("Please enter a valid age:");
+      return;
+    }
+    this.flowData.age = num;
+    if (num > 45) this.flowData.points += 2;
+
+    this.state = "calc_diabetes_family";
+    this.renderMessage("Does anyone in your family (parents/siblings) have diabetes?");
+    this.suggestionsContainer.innerHTML = "";
+    
+    const options = ["Yes", "No"];
+    options.forEach(opt => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = opt;
+      chip.addEventListener("click", () => {
+        this.renderMessage(opt, "user");
+        this.handleDiabetesFamily(opt);
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  handleDiabetesFamily(opt) {
+    if (opt === "Yes") this.flowData.points += 2;
+    this.state = "calc_diabetes_active";
+    this.renderMessage("Do you have a sedentary lifestyle with little or no weekly physical exercise?");
+    this.suggestionsContainer.innerHTML = "";
+
+    const options = ["Yes", "No"];
+    options.forEach(opt => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = opt;
+      chip.addEventListener("click", () => {
+        this.renderMessage(opt, "user");
+        this.handleDiabetesActive(opt);
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  handleDiabetesActive(opt) {
+    if (opt === "Yes") this.flowData.points += 1;
+    this.state = "calc_diabetes_symptoms";
+    this.renderMessage("Are you experiencing symptoms like excessive thirst, frequent urination, or unexplained weight loss?");
+    this.suggestionsContainer.innerHTML = "";
+
+    const options = ["Yes", "No"];
+    options.forEach(opt => {
+      const chip = document.createElement("button");
+      chip.className = "chatbot-chip";
+      chip.textContent = opt;
+      chip.addEventListener("click", () => {
+        this.renderMessage(opt, "user");
+        this.handleDiabetesSymptoms(opt);
+      });
+      this.suggestionsContainer.appendChild(chip);
+    });
+  }
+
+  handleDiabetesSymptoms(opt) {
+    if (opt === "Yes") this.flowData.points += 3;
+    this.calculateDiabetesResult();
+  }
+
+  calculateDiabetesResult() {
+    this.showTyping();
+    setTimeout(() => {
+      this.hideTyping();
+      const pts = this.flowData.points;
+      let risk = "Low Risk";
+      let interpretation = "Your risk for diabetes is low. Continue following healthy nutrition practices.";
+      let recommendDr = false;
+
+      if (pts >= 5) {
+        risk = "High Risk";
+        interpretation = "Your risk level is high. We strongly recommend booking a blood sugar test and consulting our General Medicine specialists.";
+        recommendDr = true;
+      } else if (pts >= 3) {
+        risk = "Moderate Risk";
+        interpretation = "You have a moderate risk level. Try to incorporate 30 minutes of walking daily and reduce processed sugar consumption.";
+        recommendDr = true;
+      }
+
+      const responseText = `
+        🧬 **Diabetes Risk Screening Report**<br><br>
+        • Risk Level: **${risk}** (Score: ${pts}/8)<br><br>
+        *Guideline:* ${interpretation}
+      `;
+      this.renderMessage(responseText);
+
+      if (recommendDr) {
+        this.renderMessage("Would you like to book a clinical consultation with our General Medicine team?");
+        this.suggestionsContainer.innerHTML = "";
+        const yesChip = document.createElement("button");
+        yesChip.className = "chatbot-chip";
+        yesChip.textContent = "Yes, recommend doctors";
+        yesChip.addEventListener("click", () => {
+          this.renderMessage("Yes, recommend doctors", "user");
+          this.rankDoctors("General Medicine");
+        });
+        const noChip = document.createElement("button");
+        noChip.className = "chatbot-chip";
+        noChip.textContent = "No thanks";
+        noChip.addEventListener("click", () => {
+          this.renderMessage("No thanks", "user");
+          this.state = "idle";
+          this.showMenu();
+        });
+        this.suggestionsContainer.appendChild(yesChip);
+        this.suggestionsContainer.appendChild(noChip);
+      } else {
+        this.state = "idle";
+        this.showMenu();
+      }
+    }, 500);
+  }
+
+  startPregnancyCalc() {
+    this.state = "calc_pregnancy_lmp";
+    this.flowData = {};
+    this.renderMessage("Let's calculate your estimated delivery date. Please enter the first day of your last menstrual period (LMP) in **YYYY-MM-DD** format:");
+    this.suggestionsContainer.innerHTML = "";
+  }
+
+  handlePregnancyLmp(dateStr) {
+    const lmpDate = new Date(dateStr);
+    if (isNaN(lmpDate.getTime()) || lmpDate > new Date()) {
+      this.renderMessage("Please enter a valid past date in YYYY-MM-DD format:");
+      return;
+    }
+    
+    const dueDate = new Date(lmpDate.getTime() + (280 * 24 * 60 * 60 * 1000));
+    
+    this.showTyping();
+    setTimeout(() => {
+      this.hideTyping();
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      const formattedDue = dueDate.toLocaleDateString(undefined, options);
+      
+      const responseText = `
+        🤰 **Estimated Pregnancy Due Date**<br><br>
+        • Expected Due Date: **${formattedDue}**<br>
+        • LMP Reference: ${dateStr}<br><br>
+        *Maternity Tip: Consult a certified gynecologist regularly to support your prenatal health schedule.*
+      `;
+      this.renderMessage(responseText);
+
+      this.renderMessage("Would you like to view our Gynecology doctor specialists?");
+      this.suggestionsContainer.innerHTML = "";
+      const yesChip = document.createElement("button");
+      yesChip.className = "chatbot-chip";
+      yesChip.textContent = "Yes, view Gynecologists";
+      yesChip.addEventListener("click", () => {
+        this.renderMessage("Yes, view Gynecologists", "user");
+        this.rankDoctors("Gynecology");
+      });
+      const noChip = document.createElement("button");
+      noChip.className = "chatbot-chip";
+      noChip.textContent = "No thanks";
+      noChip.addEventListener("click", () => {
+        this.renderMessage("No thanks", "user");
+        this.state = "idle";
+        this.showMenu();
+      });
+      this.suggestionsContainer.appendChild(yesChip);
+      this.suggestionsContainer.appendChild(noChip);
+    }, 500);
+  }
+
+  setupGuestConversionMonitor() {
+    let hasPrompted = false;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !hasPrompted) {
+          setTimeout(() => {
+            const isClosed = this.container.classList.contains("hidden-chatbot");
+            if (isClosed && !hasPrompted) {
+              hasPrompted = true;
+              this.toggleChat(true);
+              this.showTyping();
+              setTimeout(() => {
+                this.hideTyping();
+                this.renderMessage("👋 Hello! Need assistance in finding the right medical specialist or checking appointment availability? I'm here to help!");
+                this.showMenu();
+              }, 600);
+            }
+          }, 15000);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    const targetGrid = document.getElementById("doctors-grid") || document.getElementById("doctors");
+    if (targetGrid) {
+      observer.observe(targetGrid);
+    }
   }
 }
