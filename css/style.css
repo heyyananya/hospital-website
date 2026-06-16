@@ -3257,7 +3257,7 @@ select option {
 }
 
 /* Responsive constraints */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   #chatbot-container {
     width: calc(100vw - 24px);
     right: 12px;
