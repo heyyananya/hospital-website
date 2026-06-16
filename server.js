@@ -364,11 +364,14 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
   try {
     // Save to the database
-    await pool.query(
+    console.log(`[OTP DB Debug] Attempting to insert OTP for ${emailVal}...`);
+    const dbResult = await pool.query(
       `INSERT INTO otps (email, otp, expires_at)
-       VALUES ($1, $2, $3)`,
+       VALUES ($1, $2, $3)
+       RETURNING *`,
       [emailVal, otp, expiresAt]
     );
+    console.log(`[OTP DB Debug] Inserted OTP successfully. Rows affected: ${dbResult.rowCount}. Record:`, dbResult.rows[0]);
 
     // Send the email
     const mailOptions = {
