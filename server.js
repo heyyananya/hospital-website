@@ -374,20 +374,51 @@ app.post('/api/auth/send-otp', async (req, res) => {
     const mailOptions = {
       from: process.env.SMTP_FROM || `"Superspeciality Doctors Consultation" <newwebsite1979@gmail.com>`,
       to: emailVal,
-      subject: 'Your Secure Verification OTP Code',
+      subject: 'Your Secure Verification OTP Code - Palanpur Health Hub',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-          <h2 style="color: #4A90E2; text-align: center;">Verification OTP</h2>
-          <p>Dear Patient,</p>
-          <p>You have requested a secure One-Time Password (OTP) to access the patient portal at <strong>Superspeciality Doctors Consultation</strong>.</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #333333; background: #f5f5f5; padding: 10px 20px; border-radius: 4px; border: 1px dashed #cccccc;">${otp}</span>
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 550px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+          <!-- Top bar with brand background -->
+          <div style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); padding: 30px 20px; text-align: center;">
+            <img src="cid:hospital_logo" alt="Hospital Logo" style="width: 85px; height: 85px; border-radius: 50%; border: 3px solid #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: block; margin: 0 auto 12px;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 1.4rem; font-weight: 700; letter-spacing: 0.5px;">Palanpur Health Hub</h1>
+            <p style="color: #ccfbf1; margin: 4px 0 0; font-size: 0.85rem; font-weight: 500;">Superspeciality Doctors Consultation</p>
           </div>
-          <p style="color: #666666; font-size: 0.9em;">This OTP is valid for the next <strong>5 minutes</strong>. If you did not request this code, please ignore this email.</p>
-          <hr style="border: 0; border-top: 1px solid #eeeeee; margin: 20px 0;">
-          <p style="text-align: center; font-size: 0.8em; color: #999999;">&copy; 2026 Superspeciality Doctors Consultation. All rights reserved.</p>
+          
+          <!-- Email Content Body -->
+          <div style="padding: 35px 25px; color: #334155;">
+            <p style="font-size: 1rem; line-height: 1.5; margin: 0 0 20px;">Dear Patient,</p>
+            <p style="font-size: 0.95rem; line-height: 1.5; margin: 0 0 25px; color: #475569;">You have requested a secure One-Time Password (OTP) to log in or register at the **Palanpur Health Hub** patient portal.</p>
+            
+            <!-- OTP Callout Block -->
+            <div style="background-color: #f0fdfa; border: 1px solid #5eead4; border-radius: 8px; padding: 25px; text-align: center; margin: 25px 0;">
+              <span style="display: block; font-size: 0.8rem; font-weight: 700; color: #0d9488; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Your Verification Code</span>
+              <span style="font-size: 36px; font-weight: 800; letter-spacing: 6px; color: #0f766e; font-family: Courier, monospace;">${otp}</span>
+              <span style="display: block; font-size: 0.85rem; color: #64748b; margin-top: 10px;">Expires in <strong>5 minutes</strong></span>
+            </div>
+            
+            <!-- Security Warning -->
+            <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 15px; border-radius: 0 6px 6px 0; margin-bottom: 25px;">
+              <p style="margin: 0; font-size: 0.85rem; color: #b45309; line-height: 1.4;">
+                <strong>Security Alert:</strong> Never share this code with anyone. Palanpur Health Hub staff will never call or message you to ask for this OTP. If you did not request this, please ignore this email.
+              </p>
+            </div>
+            
+            <p style="font-size: 0.9rem; line-height: 1.5; margin: 0; color: #64748b;">Warm regards,<br><strong>Patient Support Team</strong><br>Palanpur Health Hub</p>
+          </div>
+          
+          <!-- Email Footer -->
+          <div style="background-color: #f8fafc; border-top: 1px solid #f1f5f9; padding: 20px; text-align: center; font-size: 0.75rem; color: #94a3b8; line-height: 1.5;">
+            <p style="margin: 0 0 6px;">Palanpur Health Hub, Palanpur Highway, Gujarat, India</p>
+            <p style="margin: 0 0 10px;">Contact support at <a href="mailto:support@palanpurhealthhub.com" style="color: #0d9488; text-decoration: none;">support@palanpurhealthhub.com</a></p>
+            <p style="margin: 0; font-size: 0.7rem; color: #cbd5e1;">&copy; 2026 Palanpur Health Hub. Smart Hospital Solutions.</p>
+          </div>
         </div>
-      `
+      `,
+      attachments: [{
+        filename: 'hospital_logo.png',
+        path: path.join(__dirname, 'hospital_logo.png'),
+        cid: 'hospital_logo'
+      }]
     };
 
     await mailTransporter.sendMail(mailOptions);
