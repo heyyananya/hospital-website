@@ -305,63 +305,135 @@ function initAuth() {
         alert(AUTH_ALERTS[currentLanguage].emptyPatient);
         return;
       }
-      // Simple verification check helper
-      patientOtpStage.style.display = "flex";
-      patientOtpTrigger.style.display = "none";
+      
+      const isEmail = value.includes("@");
+      const hintSpan = patientOtpStage.querySelector("[data-translate='otp-sent-hint']");
+      
+      if (isEmail) {
+        if (hintSpan) {
+          hintSpan.textContent = currentLanguage === "gu" ? "તમારા ઇમેઇલ પર OTP મોકલવામાં આવ્યો છે." : (currentLanguage === "hi" ? "आपके ईमेल पर ओटीपी भेजा गया है।" : "OTP has been sent to your email address!");
+        }
+        
+        patientOtpTrigger.disabled = true;
+        patientOtpTrigger.textContent = currentLanguage === "gu" ? "ઓટીપી મોકલી રહ્યા છીએ..." : (currentLanguage === "hi" ? "ओटीपी भेज रहे हैं..." : "Sending OTP...");
+        
+        const API_BASE = window.API_BASE || '';
+        fetch(`${API_BASE}/api/auth/send-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: value })
+        })
+        .then(res => {
+          if (!res.ok) {
+            return res.json().then(errData => { throw new Error(errData.message || "Failed to send OTP."); });
+          }
+          return res.json();
+        })
+        .then(data => {
+          patientOtpTrigger.disabled = false;
+          patientOtpTrigger.textContent = AUTH_TRANSLATIONS[currentLanguage]["btn-get-otp"];
+          patientOtpStage.style.display = "flex";
+          patientOtpTrigger.style.display = "none";
+        })
+        .catch(err => {
+          patientOtpTrigger.disabled = false;
+          patientOtpTrigger.textContent = AUTH_TRANSLATIONS[currentLanguage]["btn-get-otp"];
+          alert(err.message);
+        });
+      } else {
+        // Mobile number bypass - reset hint message to default showing 123456
+        if (hintSpan) {
+          hintSpan.innerHTML = AUTH_TRANSLATIONS[currentLanguage]["otp-sent-hint"];
+        }
+        patientOtpStage.style.display = "flex";
+        patientOtpTrigger.style.display = "none";
+      }
     });
 
     patientLoginConfirm.addEventListener("click", () => {
       const code = patientOtpInput.value.trim();
       const loginVal = patientInput.value.trim();
+      const isEmail = loginVal.includes("@");
       
-      if (code !== "123456") {
-        alert(AUTH_ALERTS[currentLanguage].invalidOtp);
-        return;
-      }
+      const proceedLogin = () => {
+        const API_BASE = window.API_BASE || '';
+        patientLoginConfirm.textContent = "Verifying Verification...";
+        patientLoginConfirm.disabled = true;
 
-      const API_BASE = window.API_BASE || '';
-      patientLoginConfirm.textContent = "Verifying Verification...";
-      patientLoginConfirm.disabled = true;
+        fetch(`${API_BASE}/api/auth/patient-login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ loginVal })
+        })
+        .then(res => {
+          if (!res.ok) {
+            throw new Error("Server authentication failed.");
+          }
+          return res.json();
+        })
+        .then(data => {
+          patientLoginConfirm.textContent = AUTH_TRANSLATIONS[currentLanguage]["btn-verify-login"];
+          patientLoginConfirm.disabled = false;
 
-      fetch(`${API_BASE}/api/auth/patient-login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ loginVal })
-      })
-      .then(res => {
-        if (!res.ok) {
-          throw new Error("Server authentication failed.");
-        }
-        return res.json();
-      })
-      .then(data => {
-        patientLoginConfirm.textContent = "Verify & Enter Dashboard";
-        patientLoginConfirm.disabled = false;
-
-        if (data.success && data.user) {
-          localStorage.setItem("phh_current_user", JSON.stringify(data.user));
+          if (data.success && data.user) {
+            localStorage.setItem("phh_current_user", JSON.stringify(data.user));
+            window.location.href = "patient-dashboard.html";
+          } else {
+            throw new Error("Unable to log in patient console.");
+          }
+        })
+        .catch(err => {
+          patientLoginConfirm.textContent = AUTH_TRANSLATIONS[currentLanguage]["btn-verify-login"];
+          patientLoginConfirm.disabled = false;
+          console.error("Patient login error:", err);
+          // Fallback local logic in case API base is completely down
+          const currentUser = {
+            role: "patient",
+            name: "Guest Patient",
+            email: isEmail ? loginVal : "",
+            phone: !isEmail ? loginVal : ""
+          };
+          localStorage.setItem("phh_current_user", JSON.stringify(currentUser));
           window.location.href = "patient-dashboard.html";
-        } else {
-          throw new Error("Unable to log in patient console.");
+        });
+      };
+
+      if (isEmail) {
+        // Verify OTP against backend
+        const API_BASE = window.API_BASE || '';
+        patientLoginConfirm.textContent = currentLanguage === "gu" ? "ચકાસણી થઈ રહી છે..." : (currentLanguage === "hi" ? "सत्यापन हो रहा है..." : "Verifying OTP...");
+        patientLoginConfirm.disabled = true;
+
+        fetch(`${API_BASE}/api/auth/verify-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: loginVal, otp: code })
+        })
+        .then(res => {
+          if (!res.ok) {
+            return res.json().then(errData => { throw new Error(errData.message || "Invalid OTP code."); });
+          }
+          return res.json();
+        })
+        .then(data => {
+          patientLoginConfirm.disabled = false;
+          proceedLogin();
+        })
+        .catch(err => {
+          patientLoginConfirm.disabled = false;
+          patientLoginConfirm.textContent = AUTH_TRANSLATIONS[currentLanguage]["btn-verify-login"];
+          alert(err.message);
+        });
+      } else {
+        // Mobile verification check locally
+        if (code !== "123456") {
+          alert(AUTH_ALERTS[currentLanguage].invalidOtp);
+          return;
         }
-      })
-      .catch(err => {
-        patientLoginConfirm.textContent = "Verify & Enter Dashboard";
-        patientLoginConfirm.disabled = false;
-        console.error("Patient login error:", err);
-        // Fallback local logic in case API base is completely down
-        const isEmail = loginVal.includes("@");
-        const currentUser = {
-          role: "patient",
-          name: "Guest Patient",
-          email: isEmail ? loginVal : "",
-          phone: !isEmail ? loginVal : ""
-        };
-        localStorage.setItem("phh_current_user", JSON.stringify(currentUser));
-        window.location.href = "patient-dashboard.html";
-      });
+        proceedLogin();
+      }
     });
   }
 
@@ -404,9 +476,46 @@ function initAuth() {
         return;
       }
 
-      // Show OTP state
-      patientRegOtpStage.style.display = "flex";
-      patientRegOtpTrigger.style.display = "none";
+      const hintSpan = patientRegOtpStage.querySelector("[data-translate='otp-sent-hint']");
+      if (email) {
+        if (hintSpan) {
+          hintSpan.textContent = currentLanguage === "gu" ? "તમારા ઇમેઇલ પર OTP મોકલવામાં આવ્યો છે." : (currentLanguage === "hi" ? "आपके ईमेल पर ओटीपी भेजा गया है।" : "OTP has been sent to your email address!");
+        }
+
+        patientRegOtpTrigger.disabled = true;
+        patientRegOtpTrigger.textContent = currentLanguage === "gu" ? "ઓટીપી મોકલી રહ્યા છીએ..." : (currentLanguage === "hi" ? "ओटीपी भेज रहे हैं..." : "Sending OTP...");
+
+        const API_BASE = window.API_BASE || '';
+        fetch(`${API_BASE}/api/auth/send-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email })
+        })
+        .then(res => {
+          if (!res.ok) {
+            return res.json().then(errData => { throw new Error(errData.message || "Failed to send OTP."); });
+          }
+          return res.json();
+        })
+        .then(data => {
+          patientRegOtpTrigger.disabled = false;
+          patientRegOtpTrigger.textContent = AUTH_TRANSLATIONS[currentLanguage]["btn-register-otp"];
+          patientRegOtpStage.style.display = "flex";
+          patientRegOtpTrigger.style.display = "none";
+        })
+        .catch(err => {
+          patientRegOtpTrigger.disabled = false;
+          patientRegOtpTrigger.textContent = AUTH_TRANSLATIONS[currentLanguage]["btn-register-otp"];
+          alert(err.message);
+        });
+      } else {
+        // Mobile number bypass
+        if (hintSpan) {
+          hintSpan.innerHTML = AUTH_TRANSLATIONS[currentLanguage]["otp-sent-hint"];
+        }
+        patientRegOtpStage.style.display = "flex";
+        patientRegOtpTrigger.style.display = "none";
+      }
     });
 
     patientRegConfirm.addEventListener("click", () => {
@@ -415,47 +524,79 @@ function initAuth() {
       const email = patientRegEmail.value.trim();
       const phone = patientRegPhone.value.trim();
 
-      if (code !== "123456") {
-        alert(AUTH_ALERTS[currentLanguage].invalidOtp);
-        return;
+      const proceedRegister = () => {
+        const API_BASE = window.API_BASE || '';
+        patientRegConfirm.textContent = currentLanguage === "gu" ? "નોંધણી કરી રહ્યા છીએ..." : (currentLanguage === "hi" ? "पंजीकरण हो रहा है..." : "Registering Account...");
+        patientRegConfirm.disabled = true;
+
+        fetch(`${API_BASE}/api/auth/patient-register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name, email, phone })
+        })
+        .then(res => {
+          if (!res.ok) {
+            return res.json().then(errData => {
+              throw new Error(errData.message || "Registration failed on server.");
+            });
+          }
+          return res.json();
+        })
+        .then(data => {
+          patientRegConfirm.textContent = AUTH_TRANSLATIONS[currentLanguage]["btn-register-confirm"];
+          patientRegConfirm.disabled = false;
+
+          if (data.success && data.user) {
+            localStorage.setItem("phh_current_user", JSON.stringify(data.user));
+            window.location.href = "patient-dashboard.html";
+          } else {
+            throw new Error("Unable to log in after registration.");
+          }
+        })
+        .catch(err => {
+          patientRegConfirm.textContent = AUTH_TRANSLATIONS[currentLanguage]["btn-register-confirm"];
+          patientRegConfirm.disabled = false;
+          alert(err.message);
+          console.error("Patient register error:", err);
+        });
+      };
+
+      if (email) {
+        // Verify OTP against backend
+        const API_BASE = window.API_BASE || '';
+        patientRegConfirm.textContent = currentLanguage === "gu" ? "ચકાસણી થઈ રહી છે..." : (currentLanguage === "hi" ? "सत्यापन हो रहा है..." : "Verifying OTP...");
+        patientRegConfirm.disabled = true;
+
+        fetch(`${API_BASE}/api/auth/verify-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email, otp: code })
+        })
+        .then(res => {
+          if (!res.ok) {
+            return res.json().then(errData => { throw new Error(errData.message || "Invalid OTP code."); });
+          }
+          return res.json();
+        })
+        .then(data => {
+          patientRegConfirm.disabled = false;
+          proceedRegister();
+        })
+        .catch(err => {
+          patientRegConfirm.disabled = false;
+          patientRegConfirm.textContent = AUTH_TRANSLATIONS[currentLanguage]["btn-register-confirm"];
+          alert(err.message);
+        });
+      } else {
+        // Mobile verification check locally
+        if (code !== "123456") {
+          alert(AUTH_ALERTS[currentLanguage].invalidOtp);
+          return;
+        }
+        proceedRegister();
       }
-
-      const API_BASE = window.API_BASE || '';
-      patientRegConfirm.textContent = currentLanguage === "gu" ? "નોંધણી કરી રહ્યા છીએ..." : (currentLanguage === "hi" ? "पंजीकरण हो रहा है..." : "Registering Account...");
-      patientRegConfirm.disabled = true;
-
-      fetch(`${API_BASE}/api/auth/patient-register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name, email, phone })
-      })
-      .then(res => {
-        if (!res.ok) {
-          return res.json().then(errData => {
-            throw new Error(errData.message || "Registration failed on server.");
-          });
-        }
-        return res.json();
-      })
-      .then(data => {
-        patientRegConfirm.textContent = "Verify & Create Account";
-        patientRegConfirm.disabled = false;
-
-        if (data.success && data.user) {
-          localStorage.setItem("phh_current_user", JSON.stringify(data.user));
-          window.location.href = "patient-dashboard.html";
-        } else {
-          throw new Error("Unable to log in after registration.");
-        }
-      })
-      .catch(err => {
-        patientRegConfirm.textContent = "Verify & Create Account";
-        patientRegConfirm.disabled = false;
-        alert(err.message);
-        console.error("Patient register error:", err);
-      });
     });
   }
 

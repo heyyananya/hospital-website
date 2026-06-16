@@ -8,6 +8,7 @@ const bcrypt = require('bcrypt');
 const { exec } = require('child_process');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
+const nodemailer = require('nodemailer');
 
 const distPath = path.join(__dirname, 'dist');
 
@@ -18,6 +19,17 @@ const PORT = process.env.PORT || 5000;
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'dummy_id',
   key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret'
+});
+
+// Initialize Nodemailer Transporter
+const mailTransporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT || '587', 10),
+  secure: process.env.SMTP_SECURE === 'true',
+  auth: {
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || ''
+  }
 });
 
 // PostgreSQL Connection Pool Setup
@@ -327,6 +339,117 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (err) {
     console.error('Database registration error:', err);
     res.status(500).json({ success: false, message: 'Database connection failed. Please ensure your PostgreSQL server is active.' });
+  }
+});
+
+// Send OTP Route (Real email-based OTP, bypasses mobile numbers)
+app.post('/api/auth/send-otp', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email address is required.' });
+  }
+
+  const emailVal = email.trim().toLowerCase();
+  const isEmail = emailVal.includes('@');
+
+  // If not an email (meaning it is a phone number), bypass sending OTP
+  if (!isEmail) {
+    return res.json({ success: true, message: 'Mobile login bypass active (Code: 123456).' });
+  }
+
+  // Generate a random 6-digit numeric OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  // Expires in 5 minutes
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+  try {
+    // Save to the database
+    await pool.query(
+      `INSERT INTO otps (email, otp, expires_at)
+       VALUES ($1, $2, $3)`,
+      [emailVal, otp, expiresAt]
+    );
+
+    // Send the email
+    const mailOptions = {
+      from: process.env.SMTP_FROM || `"Superspeciality Doctors Consultation" <newwebsite1979@gmail.com>`,
+      to: emailVal,
+      subject: 'Your Secure Verification OTP Code',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <h2 style="color: #4A90E2; text-align: center;">Verification OTP</h2>
+          <p>Dear Patient,</p>
+          <p>You have requested a secure One-Time Password (OTP) to access the patient portal at <strong>Superspeciality Doctors Consultation</strong>.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #333333; background: #f5f5f5; padding: 10px 20px; border-radius: 4px; border: 1px dashed #cccccc;">${otp}</span>
+          </div>
+          <p style="color: #666666; font-size: 0.9em;">This OTP is valid for the next <strong>5 minutes</strong>. If you did not request this code, please ignore this email.</p>
+          <hr style="border: 0; border-top: 1px solid #eeeeee; margin: 20px 0;">
+          <p style="text-align: center; font-size: 0.8em; color: #999999;">&copy; 2026 Superspeciality Doctors Consultation. All rights reserved.</p>
+        </div>
+      `
+    };
+
+    await mailTransporter.sendMail(mailOptions);
+    console.log(`Successfully sent OTP to ${emailVal}`);
+    res.json({ success: true, message: 'OTP has been successfully sent to your email.' });
+  } catch (err) {
+    console.error('Error in sending OTP:', err);
+    res.status(500).json({ success: false, message: 'Failed to send OTP email. Please check your SMTP configuration.', error: err.message });
+  }
+});
+
+// Verify OTP Route (Real email verification, bypasses mobile numbers)
+app.post('/api/auth/verify-otp', async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ success: false, message: 'Email and OTP code are required.' });
+  }
+
+  const emailVal = email.trim().toLowerCase();
+  const isEmail = emailVal.includes('@');
+
+  // If not an email (meaning it is a phone number), check for bypass code 123456
+  if (!isEmail) {
+    if (otp.trim() === '123456') {
+      return res.json({ success: true, message: 'Mobile bypass code successfully verified.' });
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid verification code for mobile number.' });
+    }
+  }
+
+  try {
+    // Find the latest active OTP for this email
+    const result = await pool.query(
+      `SELECT * FROM otps 
+       WHERE email = $1 
+       ORDER BY created_at DESC 
+       LIMIT 1`,
+      [emailVal]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'No OTP code found for this email. Please request a new one.' });
+    }
+
+    const record = result.rows[0];
+    const expiresAt = new Date(record.expires_at);
+
+    if (Date.now() > expiresAt.getTime()) {
+      return res.status(400).json({ success: false, message: 'This OTP code has expired. Please request a new one.' });
+    }
+
+    if (record.otp !== otp.trim()) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP code. Please check your email and try again.' });
+    }
+
+    // Clean up OTP after successful verification to prevent reuse
+    await pool.query('DELETE FROM otps WHERE email = $1', [emailVal]);
+
+    res.json({ success: true, message: 'OTP verified successfully.' });
+  } catch (err) {
+    console.error('Error in verifying OTP:', err);
+    res.status(500).json({ success: false, message: 'Failed to verify OTP code.', error: err.message });
   }
 });
 
@@ -914,6 +1037,17 @@ async function initDbSchema() {
         patient_name VARCHAR(255) NOT NULL,
         rating INT NOT NULL,
         review TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Create otps table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS otps (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        otp VARCHAR(6) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
