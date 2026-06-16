@@ -887,6 +887,29 @@ app.post('/api/doctor-request', handleDoctorRegistration);
 let schemaInitialized = false;
 async function initDbSchema() {
   if (schemaInitialized) return;
+
+  // Resiliently initialize the otps table first to ensure it's always created
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS otps (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        otp VARCHAR(6) NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    
+    try {
+      await pool.query(`ALTER TABLE otps ALTER COLUMN expires_at TYPE TIMESTAMPTZ;`);
+      await pool.query(`ALTER TABLE otps ALTER COLUMN created_at TYPE TIMESTAMPTZ;`);
+    } catch (colErr) {
+      // Ignore if columns are already correct
+    }
+  } catch (otpTableErr) {
+    console.error('Resilient otps table initialization failed:', otpTableErr);
+  }
+
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS doctors (
@@ -1068,17 +1091,6 @@ async function initDbSchema() {
         patient_name VARCHAR(255) NOT NULL,
         rating INT NOT NULL,
         review TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    // Create otps table
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS otps (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(255) NOT NULL,
-        otp VARCHAR(6) NOT NULL,
-        expires_at TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
