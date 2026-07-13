@@ -712,16 +712,26 @@ function initAuth() {
 
   if (regDocOtpTrigger && regForm) {
     regDocOtpTrigger.addEventListener("click", async () => {
-      // Validate all required inputs first using browser native validation
-      if (!regForm.reportValidity()) {
-        return;
-      }
-
+      // Manual validation for maximum cross-browser reliability inside modals
+      const name = document.getElementById("reg-doc-name").value.trim();
+      const specialty = document.getElementById("reg-doc-dept").value;
+      const exp = document.getElementById("reg-doc-exp").value.trim();
+      const fee = document.getElementById("reg-doc-fee").value.trim();
+      const days = document.getElementById("reg-doc-days").value.trim();
+      const time = document.getElementById("reg-doc-time").value.trim();
+      const username = document.getElementById("reg-doc-user").value.trim();
       const email = document.getElementById("reg-doc-email").value.trim();
-      if (!email.includes("@")) {
-        alert("Please enter a valid email address.");
-        return;
-      }
+      const password = document.getElementById("reg-doc-pass").value;
+
+      if (!name) { alert("Please enter your Full Name."); return; }
+      if (!specialty) { alert("Please select a Medical Specialty."); return; }
+      if (!exp) { alert("Please enter your Experience Duration."); return; }
+      if (!fee) { alert("Please enter your Consultation Fee."); return; }
+      if (!days) { alert("Please enter your Visiting Days."); return; }
+      if (!time) { alert("Please enter your Visiting Hours."); return; }
+      if (!username) { alert("Please enter your Desired Username."); return; }
+      if (!email || !email.includes("@")) { alert("Please enter a valid Email ID."); return; }
+      if (!password) { alert("Please enter your Desired Password."); return; }
 
       regDocOtpTrigger.disabled = true;
       regDocOtpTrigger.textContent = "Sending OTP...";
