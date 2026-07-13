@@ -342,6 +342,41 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// Check username availability endpoint
+app.post('/api/auth/check-username', async (req, res) => {
+  const { username } = req.body;
+  if (!username) {
+    return res.status(400).json({ success: false, message: 'Username is required.' });
+  }
+
+  const checkUsername = username.trim().toLowerCase();
+
+  try {
+    // 1. Check in users table
+    const userCheck = await pool.query('SELECT id FROM users WHERE LOWER(username) = $1 LIMIT 1', [checkUsername]);
+    if (userCheck.rows.length > 0) {
+      return res.json({ success: true, available: false, message: 'Username is already taken. Choose another one.' });
+    }
+
+    // 2. Check in doctors table
+    const docCheck = await pool.query('SELECT id FROM doctors WHERE LOWER(username) = $1 LIMIT 1', [checkUsername]);
+    if (docCheck.rows.length > 0) {
+      return res.json({ success: true, available: false, message: 'Username is already taken. Choose another one.' });
+    }
+
+    // 3. Check in doctor_requests table
+    const reqCheck = await pool.query('SELECT id FROM doctor_requests WHERE LOWER(username) = $1 LIMIT 1', [checkUsername]);
+    if (reqCheck.rows.length > 0) {
+      return res.json({ success: true, available: false, message: 'Username is already taken and pending approval. Choose another one.' });
+    }
+
+    return res.json({ success: true, available: true, message: 'Username is available.' });
+  } catch (err) {
+    console.error('Error checking username availability:', err);
+    return res.status(500).json({ success: false, message: 'Error checking username availability.' });
+  }
+});
+
 // Send OTP Route (Real email-based OTP, bypasses mobile numbers)
 app.post('/api/auth/send-otp', async (req, res) => {
   const { email } = req.body;

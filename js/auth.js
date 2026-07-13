@@ -734,6 +734,34 @@ function initAuth() {
       if (!password) { alert("Please enter your Desired Password."); return; }
 
       regDocOtpTrigger.disabled = true;
+      regDocOtpTrigger.textContent = "Checking Username...";
+
+      // Verify username availability first
+      try {
+        const apiBase = window.API_BASE || '';
+        const checkRes = await fetch(`${apiBase}/api/auth/check-username`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username })
+        });
+
+        const checkData = await checkRes.json();
+        if (!checkRes.ok || !checkData.success || !checkData.available) {
+          alert(checkData.message || "Username is already taken. Choose another one.");
+          regDocOtpTrigger.disabled = false;
+          regDocOtpTrigger.textContent = "Send Verification OTP";
+          return;
+        }
+      } catch (err) {
+        console.error("Username verification error:", err);
+        alert("Failed to check username availability. Please try again.");
+        regDocOtpTrigger.disabled = false;
+        regDocOtpTrigger.textContent = "Send Verification OTP";
+        return;
+      }
+
       regDocOtpTrigger.textContent = "Sending OTP...";
 
       try {
