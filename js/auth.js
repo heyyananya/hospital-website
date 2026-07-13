@@ -756,6 +756,13 @@ function initAuth() {
 
     regForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+
+      // If OTP stage is not visible yet, trigger OTP sending first
+      if (!regDocOtpStage || regDocOtpStage.style.display !== "flex") {
+        if (regDocOtpTrigger) regDocOtpTrigger.click();
+        return;
+      }
+
       const name = document.getElementById("reg-doc-name").value.trim();
       const specialty = document.getElementById("reg-doc-dept").value;
       const exp = document.getElementById("reg-doc-exp").value.trim();
@@ -766,6 +773,11 @@ function initAuth() {
       const email = document.getElementById("reg-doc-email").value.trim();
       const password = document.getElementById("reg-doc-pass").value;
       const otp = regDocOtpInput.value.trim();
+
+      if (otp.length !== 6) {
+        alert("Please enter the 6-digit verification code.");
+        return;
+      }
 
       const proceedRegister = async () => {
         const confirmBtn = document.getElementById("reg-doc-otp-confirm");
