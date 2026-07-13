@@ -706,7 +706,54 @@ function initAuth() {
     });
   }
 
-  if (regForm) {
+  const regDocOtpTrigger = document.getElementById("reg-doc-otp-trigger");
+  const regDocOtpStage = document.getElementById("doc-otp-stage");
+  const regDocOtpInput = document.getElementById("reg-doc-otp-input");
+
+  if (regDocOtpTrigger && regForm) {
+    regDocOtpTrigger.addEventListener("click", async () => {
+      // Validate all required inputs first using browser native validation
+      if (!regForm.reportValidity()) {
+        return;
+      }
+
+      const email = document.getElementById("reg-doc-email").value.trim();
+      if (!email.includes("@")) {
+        alert("Please enter a valid email address.");
+        return;
+      }
+
+      regDocOtpTrigger.disabled = true;
+      regDocOtpTrigger.textContent = "Sending OTP...";
+
+      try {
+        const apiBase = window.API_BASE || '';
+        const response = await fetch(`${apiBase}/api/auth/send-otp`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          regDocOtpTrigger.style.display = "none";
+          if (regDocOtpStage) regDocOtpStage.style.display = "flex";
+        } else {
+          regDocOtpTrigger.disabled = false;
+          regDocOtpTrigger.textContent = "Send Verification OTP";
+          alert(data.message || "Failed to send OTP. Please check your connection.");
+        }
+      } catch (err) {
+        console.error("Doctor OTP sending error:", err);
+        regDocOtpTrigger.disabled = false;
+        regDocOtpTrigger.textContent = "Send Verification OTP";
+        alert("Failed to connect to the authentication server.");
+      }
+    });
+
     regForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const name = document.getElementById("reg-doc-name").value.trim();
@@ -718,29 +765,81 @@ function initAuth() {
       const username = document.getElementById("reg-doc-user").value.trim();
       const email = document.getElementById("reg-doc-email").value.trim();
       const password = document.getElementById("reg-doc-pass").value;
+      const otp = regDocOtpInput.value.trim();
 
+      const proceedRegister = async () => {
+        const confirmBtn = document.getElementById("reg-doc-otp-confirm");
+        if (confirmBtn) {
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = "Submitting Profile...";
+        }
+
+        try {
+          const apiBase = window.API_BASE || '';
+          const response = await fetch(`${apiBase}/api/auth/register-doctor`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name, specialty, exp, fee, days, time, username, email, password })
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success) {
+            alert(data.message || "Registration submitted successfully! Pending admin approval.");
+            regForm.reset();
+            window.closeDocRegModal();
+          } else {
+            alert(data.message || "Failed to register. Please try a different username or email.");
+          }
+        } catch (err) {
+          console.error("Doctor registration submission error:", err);
+          alert("Failed to submit registration. Please verify your connection.");
+        } finally {
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = "Verify & Submit Profile";
+          }
+        }
+      };
+
+      // Verify OTP
       try {
+        const confirmBtn = document.getElementById("reg-doc-otp-confirm");
+        if (confirmBtn) {
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = "Verifying OTP...";
+        }
+
         const apiBase = window.API_BASE || '';
-        const response = await fetch(`${apiBase}/api/auth/register-doctor`, {
+        const verifyRes = await fetch(`${apiBase}/api/auth/verify-otp`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ name, specialty, exp, fee, days, time, username, email, password })
+          body: JSON.stringify({ email, otp })
         });
 
-        const data = await response.json();
+        const verifyData = await verifyRes.json();
 
-        if (response.ok && data.success) {
-          alert(data.message || "Registration submitted successfully! Pending admin approval.");
-          regForm.reset();
-          window.closeDocRegModal();
+        if (verifyRes.ok && verifyData.success) {
+          await proceedRegister();
         } else {
-          alert(data.message || "Failed to register. Please try a different username or email.");
+          alert(verifyData.message || "Invalid OTP code. Please try again.");
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = "Verify & Submit Profile";
+          }
         }
       } catch (err) {
-        console.error("Doctor registration submission error:", err);
-        alert("Failed to submit registration. Please verify your connection.");
+        console.error("OTP verification error:", err);
+        alert("Failed to verify OTP. Please try again.");
+        const confirmBtn = document.getElementById("reg-doc-otp-confirm");
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = "Verify & Submit Profile";
+        }
       }
     });
   }
@@ -760,6 +859,15 @@ window.closeDocRegModal = function() {
     setTimeout(() => {
       if (!modal.classList.contains("active")) {
         modal.style.display = "none";
+        // Reset OTP fields
+        const otpStage = document.getElementById("doc-otp-stage");
+        const otpTrigger = document.getElementById("reg-doc-otp-trigger");
+        if (otpStage) otpStage.style.display = "none";
+        if (otpTrigger) {
+          otpTrigger.style.display = "block";
+          otpTrigger.disabled = false;
+          otpTrigger.textContent = "Send Verification OTP";
+        }
       }
     }, 400); // match transition duration (0.4s)
   }
