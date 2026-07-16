@@ -1902,14 +1902,23 @@ app.post('/api/book-appointment', async (req, res) => {
     const bookingId = "PHH-" + Math.floor(100000 + Math.random() * 900000);
     const payId = "pay_PHH_" + Math.random().toString(36).substr(2, 9).toUpperCase();
 
-    // Fetch doctor fee and specialty
+    // Fetch doctor fee, specialty and live status
     let fee = 600;
     let specialty = 'General Medicine';
     try {
-      const docResult = await pool.query('SELECT fee, specialty FROM doctors WHERE id = $1', [doctor_id]);
+      const docResult = await pool.query('SELECT fee, specialty, status FROM doctors WHERE id = $1', [doctor_id]);
       if (docResult.rows.length > 0) {
         fee = docResult.rows[0].fee;
         specialty = docResult.rows[0].specialty;
+
+        // Patients can only book doctors whose live status is 'Available'
+        const docStatus = docResult.rows[0].status;
+        if (docStatus && docStatus !== 'Available') {
+          return res.status(409).json({
+            success: false,
+            message: `Dr. ${doctor_name} is currently "${docStatus}" and is not accepting new bookings. Please try again once the doctor is Available.`
+          });
+        }
       }
     } catch (err) {
       console.error("Error fetching doctor fee and specialty from DB:", err);

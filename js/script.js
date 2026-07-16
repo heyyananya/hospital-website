@@ -60,6 +60,7 @@ const TRANSLATIONS = {
     "doc-timings-label": "Timings",
     "doc-fee-label": "Consultation Fee",
     "doc-btn-book": "Book Appointment",
+    "doc-btn-unavailable": "Currently Unavailable",
     "form-select-doc": "Select doctor...",
     "form-dept": "Select Department",
     "form-doctor": "Select Specialist Doctor",
@@ -246,6 +247,7 @@ const TRANSLATIONS = {
     "doc-timings-label": "સમય",
     "doc-fee-label": "તપાસ ફી",
     "doc-btn-book": "બુકિંગ કરો",
+    "doc-btn-unavailable": "હાલમાં અનુપલબ્ધ",
     "form-select-doc": "ડોક્ટર પસંદ કરો...",
     "form-dept": "વિભાગ પસંદ કરો",
     "form-doctor": "નિષ્ણાત ડોક્ટર પસંદ કરો",
@@ -432,6 +434,7 @@ const TRANSLATIONS = {
     "doc-timings-label": "समय",
     "doc-fee-label": "परामर्श शुल्क",
     "doc-btn-book": "अपॉइंटमेंट बुक करें",
+    "doc-btn-unavailable": "अभी उपलब्ध नहीं",
     "form-select-doc": "डॉक्टर चुनें...",
     "form-dept": "विभाग चुनें",
     "form-doctor": "विशेषज्ञ डॉक्टर चुनें",
@@ -963,6 +966,18 @@ async function fetchLiveStats() {
 }
 
 
+// A doctor accepts new bookings only while their live status is "Available"
+function isDoctorBookable(doc) {
+  return !doc || !doc.status || doc.status === "Available";
+}
+
+function getDoctorUnavailableMessage(doc) {
+  const statusName = doc && doc.status ? doc.status : "Unavailable";
+  if (currentLanguage === "gu") return `ડૉ. ${doc.name} હાલમાં "${statusName}" સ્થિતિમાં છે અને નવી બુકિંગ સ્વીકારી રહ્યા નથી. ડૉક્ટર ઉપલબ્ધ થાય ત્યારે ફરી પ્રયાસ કરો.`;
+  if (currentLanguage === "hi") return `डॉ. ${doc.name} अभी "${statusName}" स्थिति में हैं और नई बुकिंग स्वीकार नहीं कर रहे हैं। डॉक्टर के उपलब्ध होने पर पुनः प्रयास करें।`;
+  return `Dr. ${doc.name} is currently "${statusName}" and is not accepting new bookings. Please try again once the doctor is Available.`;
+}
+
 // 4. Render lists
 function renderDoctorsList(filter = "all") {
   doctorsGrid.innerHTML = "";
@@ -1082,7 +1097,9 @@ function renderDoctorsList(filter = "all") {
             <span class="doc-meta-val" style="color: var(--primary);">₹${doc.fee}</span>
           </div>
         </div>
-        <button class="btn btn-primary doc-book-btn btn-ripple" onclick="triggerBooking('${doc.id}')">${TRANSLATIONS[currentLanguage]["doc-btn-book"] || "Book Appointment"}</button>
+        ${isDoctorBookable(doc)
+          ? `<button class="btn btn-primary doc-book-btn btn-ripple" onclick="triggerBooking('${doc.id}')">${TRANSLATIONS[currentLanguage]["doc-btn-book"] || "Book Appointment"}</button>`
+          : `<button class="btn doc-book-btn" disabled style="background: #e2e8f0; color: #94a3b8; cursor: not-allowed; box-shadow: none; border: 1px solid #cbd5e1;"><i class="fa-solid fa-ban" style="margin-right: 6px;"></i>${TRANSLATIONS[currentLanguage]["doc-btn-unavailable"] || "Currently Unavailable"}</button>`}
       </div>
     `;
     doctorsGrid.appendChild(docCard);
@@ -1330,6 +1347,10 @@ function populateDoctorsDropdown() {
     const transStatus = TRANSLATIONS[currentLanguage][transKey] || doc.status;
 
     opt.textContent = `${doc.name} (Fee: ₹${doc.fee} | ${transStatus})`;
+    // Doctors who are not Available cannot be selected for new bookings
+    if (!isDoctorBookable(doc)) {
+      opt.disabled = true;
+    }
     bookDoctor.appendChild(opt);
   });
   
@@ -1516,6 +1537,10 @@ bookDate.addEventListener("change", () => {
 // Trigger booking directly from doctor cards
 window.triggerBooking = function(docId) {
   const doc = doctors.find(d => d.id === docId);
+  if (doc && !isDoctorBookable(doc)) {
+    alert(getDoctorUnavailableMessage(doc));
+    return;
+  }
   if (doc) {
     document.getElementById("appointment").scrollIntoView();
     bookDept.value = doc.specialty;
@@ -1585,6 +1610,12 @@ window.launchRazorpayPayment = function(apptData) {
     const targetDoc = doctors.find(d => d.id === docId);
     if (!targetDoc) {
       reject(new Error("Doctor profile mismatch. Please select another specialist."));
+      return;
+    }
+
+    // Final safety check: never start a payment for a doctor who is not Available
+    if (!isDoctorBookable(targetDoc)) {
+      reject(new Error(getDoctorUnavailableMessage(targetDoc)));
       return;
     }
 
@@ -1723,6 +1754,13 @@ appointmentForm.addEventListener("submit", (e) => {
   
   if (!name || !phone || !dept || !docId || !date || !slot || !symptoms) {
     alert("Please fill in all required medical booking fields.");
+    return;
+  }
+
+  // Block booking if the selected doctor's live status is not Available
+  const bookingDoc = doctors.find(d => d.id === docId);
+  if (bookingDoc && !isDoctorBookable(bookingDoc)) {
+    alert(getDoctorUnavailableMessage(bookingDoc));
     return;
   }
 
