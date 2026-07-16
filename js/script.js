@@ -43,6 +43,7 @@ const TRANSLATIONS = {
     "status-busy": "Busy",
     "status-late": "Running Late",
     "status-left": "Left Hospital",
+    "status-offline": "Offline",
     "legend-avail-desc": "Doctor is actively consultation-ready",
     "legend-busy-desc": "Doctor is in emergency or operations",
     "legend-late-desc": "Consultation running ~15-30 mins behind",
@@ -230,6 +231,7 @@ const TRANSLATIONS = {
     "status-busy": "વ્યસ્ત",
     "status-late": "મોડું ચાલે છે",
     "status-left": "હોસ્પિટલ છોડી દીધી",
+    "status-offline": "ઑફલાઇન",
     "legend-avail-desc": "ડૉક્ટર એક્ટિવ રીતે તપાસ માટે ઉપલબ્ધ છે",
     "legend-busy-desc": "ડૉક્ટર સર્જરી અથવા ઇમરજન્સી ડ્યુટી પર છે",
     "legend-late-desc": "તપાસ અંદાજે ૧૫-૩૦ મિનિટ મોડી ચાલે છે",
@@ -417,6 +419,7 @@ const TRANSLATIONS = {
     "status-busy": "व्यस्त",
     "status-late": "देरी से चल रहे हैं",
     "status-left": "अस्पताल से चले गए",
+    "status-offline": "ऑफ़लाइन",
     "legend-avail-desc": "डॉक्टर सक्रिय रूप से परामर्श के लिए उपलब्ध हैं",
     "legend-busy-desc": "डॉक्टर आपातकालीन स्थिति या ऑपरेशन में हैं",
     "legend-late-desc": "परामर्श लगभग 15-30 मिनट देरी से चल रहा है",
@@ -991,14 +994,16 @@ function renderDoctorsList(filter = "all") {
   }
 
   filteredDocs.forEach(doc => {
-    // Determine status badge class
+    // Determine status badge class — always reflect the exact status set by the doctor
     let statusClass = "available";
     let transKey = "status-avail";
     if (doc.status === "Busy") { statusClass = "busy"; transKey = "status-busy"; }
     else if (doc.status === "Running Late") { statusClass = "late"; transKey = "status-late"; }
     else if (doc.status === "Left Hospital") { statusClass = "left"; transKey = "status-left"; }
+    else if (doc.status === "Offline") { statusClass = "left"; transKey = "status-offline"; }
+    else if (doc.status && doc.status !== "Available") { statusClass = "left"; transKey = null; }
 
-    const transStatus = TRANSLATIONS[currentLanguage][transKey] || doc.status;
+    const transStatus = transKey ? (TRANSLATIONS[currentLanguage][transKey] || doc.status) : doc.status;
 
     // Fetch reviews for this doctor safely using type-agnostic string matching
     const allReviews = JSON.parse(localStorage.getItem("phh_reviews")) || [];
@@ -1339,12 +1344,14 @@ function populateDoctorsDropdown() {
     const opt = document.createElement("option");
     opt.value = doc.id;
     
-    // Determine localized status
+    // Determine localized status — always reflect the exact status set by the doctor
     let transKey = "status-avail";
     if (doc.status === "Busy") { transKey = "status-busy"; }
     else if (doc.status === "Running Late") { transKey = "status-late"; }
     else if (doc.status === "Left Hospital") { transKey = "status-left"; }
-    const transStatus = TRANSLATIONS[currentLanguage][transKey] || doc.status;
+    else if (doc.status === "Offline") { transKey = "status-offline"; }
+    else if (doc.status && doc.status !== "Available") { transKey = null; }
+    const transStatus = transKey ? (TRANSLATIONS[currentLanguage][transKey] || doc.status) : doc.status;
 
     opt.textContent = `${doc.name} (Fee: ₹${doc.fee} | ${transStatus})`;
     // Doctors who are not Available cannot be selected for new bookings
