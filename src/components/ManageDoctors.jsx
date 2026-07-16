@@ -90,11 +90,14 @@ function ManageDoctors() {
     // Direct database sync POST call to ensure instant synchronization
     const apiBase = getApiBase();
     try {
+      const syncHeaders = { 'Content-Type': 'application/json' };
+      const token = localStorage.getItem('phh_jwt_token');
+      if (token) {
+        syncHeaders['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(`${apiBase}/api/sync/save-item`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: syncHeaders,
         body: JSON.stringify({
           key: 'phh_doctors',
           data: updatedDocs

@@ -12,6 +12,16 @@ const getApiBase = () => {
   return (local && p !== '5000') ? `http://${h}:5000` : '';
 };
 
+// JSON headers including the staff JWT — required for writes to doctor tables
+const getAuthHeaders = () => {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = localStorage.getItem('phh_jwt_token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
 export default function DoctorDashboard() {
   // 1. Session verification & states
   const [currentUser, setCurrentUser] = useState(() => {
@@ -440,7 +450,7 @@ export default function DoctorDashboard() {
       
       const resDocs = await fetch(`${apiBase}/api/sync/save-item`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ key: 'phh_doctors', data: updatedDoctors })
       });
       const docsData = await resDocs.json();
@@ -451,7 +461,7 @@ export default function DoctorDashboard() {
 
       const resSlots = await fetch(`${apiBase}/api/sync/save-item`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ key: 'phh_slots', data: updatedSlots })
       });
       const slotsData = await resSlots.json();
@@ -514,7 +524,7 @@ export default function DoctorDashboard() {
       const apiBase = getApiBase();
       const response = await fetch(`${apiBase}/api/sync/save-item`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ key: 'phh_slots', data: updatedSlots })
       });
       const resData = await response.json();
@@ -565,7 +575,7 @@ export default function DoctorDashboard() {
         const apiBase = getApiBase();
         const res = await fetch(`${apiBase}/api/sync/save-item`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ key: 'phh_doctors', data: updatedDoctors })
         });
         if (res.ok) {
@@ -668,7 +678,7 @@ export default function DoctorDashboard() {
 
       const resAppts = await fetch(`${apiBase}/api/sync/save-item`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ key: 'phh_appointments', data: updatedAppointments })
       });
       const apptsData = await resAppts.json();
@@ -679,7 +689,7 @@ export default function DoctorDashboard() {
 
       const resSlots = await fetch(`${apiBase}/api/sync/save-item`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ key: 'phh_slots', data: updatedSlots })
       });
       const slotsData = await resSlots.json();
@@ -732,7 +742,7 @@ export default function DoctorDashboard() {
 
       const resAppts = await fetch(`${apiBase}/api/sync/save-item`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ key: 'phh_appointments', data: updatedAppointments })
       });
       const apptsData = await resAppts.json();
@@ -743,7 +753,7 @@ export default function DoctorDashboard() {
 
       const resSlots = await fetch(`${apiBase}/api/sync/save-item`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ key: 'phh_slots', data: updatedSlots })
       });
       const slotsData = await resSlots.json();
@@ -780,7 +790,7 @@ export default function DoctorDashboard() {
       const apiBase = getApiBase();
       const resAppts = await fetch(`${apiBase}/api/sync/save-item`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ key: 'phh_appointments', data: updatedAppointments })
       });
       const apptsData = await resAppts.json();
@@ -877,7 +887,7 @@ export default function DoctorDashboard() {
 
       const resAppts = await fetch(`${apiBase}/api/sync/save-item`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ key: 'phh_appointments', data: updatedAppointments })
       });
       const apptsData = await resAppts.json();
@@ -888,7 +898,7 @@ export default function DoctorDashboard() {
 
       const resSlots = await fetch(`${apiBase}/api/sync/save-item`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ key: 'phh_slots', data: updatedSlots })
       });
       const slotsData = await resSlots.json();
