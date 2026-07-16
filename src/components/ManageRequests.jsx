@@ -29,10 +29,12 @@ function ManageRequests() {
   const handleApprove = async (docId) => {
     try {
       const apiBase = window.API_BASE || '';
+      const token = localStorage.getItem('phh_jwt_token');
       const response = await fetch(`${apiBase}/api/admin/approve-doctor`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ docId })
       });
@@ -67,10 +69,12 @@ function ManageRequests() {
 
     try {
       const apiBase = window.API_BASE || '';
+      const token = localStorage.getItem('phh_jwt_token');
       const response = await fetch(`${apiBase}/api/admin/reject-doctor`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ docId: doc.id })
       });

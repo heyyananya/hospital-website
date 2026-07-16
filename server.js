@@ -182,10 +182,22 @@ app.use(async (req, res, next) => {
   } catch (err) {
     console.error('Database lazy-init failed inside middleware:', err.message);
   }
+
+  // If the pool is still unavailable, fail API requests cleanly instead of
+  // letting every route crash on `pool.query` of null.
+  if (!pool && req.path.startsWith('/api/')) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database is currently unavailable. Please ensure the PostgreSQL server is running and try again.'
+    });
+  }
   next();
 });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'palanpur_health_hub_secret_key_123';
+if (!process.env.JWT_SECRET) {
+  console.warn('[Security Warning] JWT_SECRET is not set in .env — using the built-in development fallback secret. Set JWT_SECRET before deploying.');
+}
 
 function signToken(payload) {
   const header = { alg: 'HS256', typ: 'JWT' };
@@ -234,13 +246,68 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-const getRandomAge = () => Math.floor(Math.random() * 58) + 18; // 18 to 75
-const getRandomGender = () => {
-  const rand = Math.random();
-  if (rand < 0.48) return 'Male';
-  if (rand < 0.96) return 'Female';
-  return 'Other';
-};
+function requireStaff(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Unauthorized access. Staff authorization token is required.' });
+  }
+
+  const payload = verifyToken(authHeader.split(' ')[1]);
+  if (!payload || !['admin', 'receptionist', 'doctor'].includes(payload.role)) {
+    return res.status(403).json({ success: false, message: 'Forbidden. Access is restricted to hospital staff.' });
+  }
+
+  req.staff = payload;
+  next();
+}
+
+// Extract the verified token payload from a request, or null if absent/invalid
+function getAuthPayload(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  return verifyToken(authHeader.split(' ')[1]);
+}
+
+// Run queries inside a real transaction on a single dedicated client.
+// pool.query('BEGIN')/('COMMIT') does NOT work: each call may use a different pooled connection.
+async function withTransaction(work) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await work(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (rollbackErr) { /* connection-level failure */ }
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// Compare a password against a stored value that may be a bcrypt hash or a
+// legacy plaintext value. Reports plaintext matches so callers can upgrade them.
+async function verifyPassword(inputPassword, storedPassword) {
+  if (!storedPassword) return { match: false, isPlaintext: false };
+  try {
+    if (await bcrypt.compare(inputPassword, storedPassword)) {
+      return { match: true, isPlaintext: false };
+    }
+  } catch (bcryptErr) {
+    // Stored value is not a valid bcrypt hash — fall through to plaintext check
+  }
+  if (inputPassword === storedPassword) {
+    return { match: true, isPlaintext: true };
+  }
+  return { match: false, isPlaintext: false };
+}
+
+// Remove sensitive columns before sending doctor rows to clients
+function sanitizeDoctorRow(row) {
+  if (!row || typeof row !== 'object') return row;
+  const { password, ...safe } = row;
+  return safe;
+}
 
 // Serve static frontend files with cache disabled to prevent mobile caching issues
 const staticOptions = {
@@ -412,7 +479,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
     // If not, print a warning in the console, log the OTP, and succeed with a simulation message.
     if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
       console.log(`[SMTP Warning] SMTP credentials are not configured. Simulated OTP for ${emailVal} is: ${otp}`);
-      return res.json({ success: true, message: 'OTP simulated successfully. (Use test code: 123456)' });
+      return res.json({ success: true, message: 'Email service is not configured. Your OTP has been printed in the server console.' });
     }
 
     let emailHtml = `
@@ -507,13 +574,12 @@ app.post('/api/auth/verify-otp', async (req, res) => {
   const emailVal = email.trim().toLowerCase();
   const isEmail = emailVal.includes('@');
 
-  // Universal bypass code 123456 for both mobile and email to ensure reliability and easy testing
-  if (otp.trim() === '123456') {
-    return res.json({ success: true, message: 'Verification bypass code successfully verified.' });
-  }
-
-  // If it's a mobile number (not email), it has already been bypassed by 123456 above.
+  // Mobile numbers have no SMS provider integrated, so they use the fixed test code 123456.
+  // Email addresses must verify against the real OTP that was emailed — no bypass.
   if (!isEmail) {
+    if (otp.trim() === '123456') {
+      return res.json({ success: true, message: 'Mobile verification code successfully verified.' });
+    }
     return res.status(400).json({ success: false, message: 'Invalid verification code for mobile number.' });
   }
 
@@ -571,21 +637,20 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (userResult.rows.length > 0) {
       const user = userResult.rows[0];
-      const dbPassword = user.password;
-      let isMatch = false;
 
-      // Check password (tries bcrypt first, then falls back to plain-text check)
-      try {
-        isMatch = await bcrypt.compare(password, dbPassword);
-      } catch (bcryptErr) {
-        isMatch = (password === dbPassword);
-      }
-
-      if (!isMatch && password === dbPassword) {
-        isMatch = true;
-      }
+      // Check password (bcrypt hash, with legacy plaintext fallback)
+      const { match: isMatch, isPlaintext } = await verifyPassword(password, user.password);
 
       if (isMatch) {
+        // Upgrade legacy plaintext rows to bcrypt on successful login
+        if (isPlaintext) {
+          try {
+            const upgradedHash = await bcrypt.hash(password, 10);
+            await pool.query('UPDATE users SET password = $1 WHERE id = $2', [upgradedHash, user.id]);
+          } catch (rehashErr) {
+            console.error('Failed to upgrade plaintext password for user:', user.username, rehashErr.message);
+          }
+        }
         const token = signToken({ id: user.id, username: user.username, role: user.role });
         return res.json({
           success: true,
@@ -609,20 +674,19 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (docResult.rows.length > 0) {
       const doc = docResult.rows[0];
-      const dbPassword = doc.password;
-      let isMatch = false;
 
-      try {
-        isMatch = await bcrypt.compare(password, dbPassword);
-      } catch (bcryptErr) {
-        isMatch = (password === dbPassword);
-      }
-
-      if (!isMatch && password === dbPassword) {
-        isMatch = true;
-      }
+      const { match: isMatch, isPlaintext } = await verifyPassword(password, doc.password);
 
       if (isMatch) {
+        // Upgrade legacy plaintext rows to bcrypt on successful login
+        if (isPlaintext) {
+          try {
+            const upgradedHash = await bcrypt.hash(password, 10);
+            await pool.query('UPDATE doctors SET password = $1 WHERE id = $2', [upgradedHash, doc.id]);
+          } catch (rehashErr) {
+            console.error('Failed to upgrade plaintext password for doctor:', doc.username, rehashErr.message);
+          }
+        }
         // Check if registration is pending admin approval
         if (doc.status === 'Pending') {
           return res.status(403).json({ 
@@ -655,18 +719,8 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (reqResult.rows.length > 0) {
       const docReq = reqResult.rows[0];
-      const dbPassword = docReq.password;
-      let isMatch = false;
 
-      try {
-        isMatch = await bcrypt.compare(password, dbPassword);
-      } catch (bcryptErr) {
-        isMatch = (password === dbPassword);
-      }
-
-      if (!isMatch && password === dbPassword) {
-        isMatch = true;
-      }
+      const { match: isMatch } = await verifyPassword(password, docReq.password);
 
       if (isMatch) {
         return res.status(403).json({ 
@@ -1152,24 +1206,32 @@ async function initDbSchema() {
       );
     `);
 
-    // Seed default users if table is empty
+    // Seed default users if table is empty (passwords stored as bcrypt hashes)
     const userCheck = await pool.query("SELECT COUNT(*) FROM users");
     if (parseInt(userCheck.rows[0].count, 10) === 0) {
-      await pool.query(`
-        INSERT INTO users (username, password, role, name, status) VALUES
-        ('ajit', 'ajit123', 'admin', 'Dr. Ajit B. Patel', 'active'),
-        ('ananya', 'ananya123', 'admin', 'Ananya Patel', 'active'),
-        ('receptionist', 'pass123', 'receptionist', 'Front Desk Receptionist', 'active')
-      `);
+      const defaultUsers = [
+        ['ajit', 'ajit123', 'admin', 'Dr. Ajit B. Patel'],
+        ['ananya', 'ananya123', 'admin', 'Ananya Patel'],
+        ['receptionist', 'pass123', 'receptionist', 'Front Desk Receptionist']
+      ];
+      for (const [username, plainPassword, role, name] of defaultUsers) {
+        const hashed = await bcrypt.hash(plainPassword, 10);
+        await pool.query(
+          `INSERT INTO users (username, password, role, name, status) VALUES ($1, $2, $3, $4, 'active')`,
+          [username, hashed, role, name]
+        );
+      }
       console.log('Seeded default admin and receptionist users.');
     } else {
       // Check if receptionist role is present, if not seed it
       const recepCheck = await pool.query("SELECT * FROM users WHERE role = 'receptionist' LIMIT 1");
       if (recepCheck.rows.length === 0) {
-        await pool.query(`
-          INSERT INTO users (username, password, role, name, status)
-          VALUES ('receptionist', 'pass123', 'receptionist', 'Front Desk Receptionist', 'active')
-        `);
+        const hashed = await bcrypt.hash('pass123', 10);
+        await pool.query(
+          `INSERT INTO users (username, password, role, name, status)
+           VALUES ('receptionist', $1, 'receptionist', 'Front Desk Receptionist', 'active')`,
+          [hashed]
+        );
         console.log('Seeded receptionist user.');
       }
     }
@@ -1235,8 +1297,8 @@ app.get('/api/sync/get-state', async (req, res) => {
 
     res.json({
       success: true,
-      doctors: doctorsResult.rows,
-      doctorRequests: doctorRequestsResult.rows,
+      doctors: doctorsResult.rows.map(sanitizeDoctorRow),
+      doctorRequests: doctorRequestsResult.rows.map(sanitizeDoctorRow),
       appointments: appointmentsResult.rows.map(app => {
         return {
           id: app.id,
@@ -1372,7 +1434,7 @@ app.get('/api/doctors', async (req, res) => {
     const result = await pool.query('SELECT * FROM doctors ORDER BY name ASC');
     res.json({
       success: true,
-      doctors: result.rows
+      doctors: result.rows.map(sanitizeDoctorRow)
     });
   } catch (err) {
     console.error('Error fetching doctors REST:', err);
@@ -1400,7 +1462,7 @@ app.get('/api/doctor-requests', async (req, res) => {
     const result = await pool.query('SELECT * FROM doctor_requests ORDER BY name ASC');
     res.json({
       success: true,
-      doctorRequests: result.rows
+      doctorRequests: result.rows.map(sanitizeDoctorRow)
     });
   } catch (err) {
     console.error('Error fetching doctor requests REST:', err);
@@ -1417,60 +1479,49 @@ app.post('/api/sync/save-item', async (req, res) => {
   }
 
   try {
-    if (key === 'phh_doctors') {
-      await pool.query('BEGIN');
-      await pool.query('DELETE FROM doctors');
-      for (const doc of data) {
-        await pool.query(`
-          INSERT INTO doctors (id, name, specialty, exp, days, time, fee, status, rating, username, password, email)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-        `, [
-          doc.id || null,
-          doc.name || null,
-          doc.specialty || doc.speciality || doc.dept || null,
-          doc.exp || null,
-          doc.days || null,
-          doc.time || null,
-          doc.fee !== undefined && doc.fee !== null ? Number(doc.fee) : null,
-          doc.status || null,
-          doc.rating !== undefined && doc.rating !== null ? Number(doc.rating) : null,
-          doc.username || null,
-          doc.password || null,
-          doc.email || null
-        ]);
+    if (key === 'phh_doctors' || key === 'phh_doctor_requests') {
+      // Only authenticated staff may rewrite the doctor tables
+      const payload = getAuthPayload(req);
+      if (!payload || !['admin', 'receptionist', 'doctor'].includes(payload.role)) {
+        return res.status(403).json({ success: false, message: 'Forbidden. Staff authorization is required to modify doctor records.' });
       }
-      await pool.query('COMMIT');
-    } else if (key === 'phh_doctor_requests') {
-      await pool.query('BEGIN');
-      await pool.query('DELETE FROM doctor_requests');
-      for (const reqDoc of data) {
-        await pool.query(`
-          INSERT INTO doctor_requests (id, name, specialty, exp, days, time, fee, status, rating, username, password, email)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-        `, [
-          reqDoc.id || null,
-          reqDoc.name || null,
-          reqDoc.specialty || reqDoc.speciality || reqDoc.dept || null,
-          reqDoc.exp || null,
-          reqDoc.days || null,
-          reqDoc.time || null,
-          reqDoc.fee !== undefined && reqDoc.fee !== null ? Number(reqDoc.fee) : null,
-          reqDoc.status || null,
-          reqDoc.rating !== undefined && reqDoc.rating !== null ? Number(reqDoc.rating) : null,
-          reqDoc.username || null,
-          reqDoc.password || null,
-          reqDoc.email || null
-        ]);
-      }
-      await pool.query('COMMIT');
+
+      const table = key === 'phh_doctors' ? 'doctors' : 'doctor_requests';
+      const items = Array.isArray(data) ? data : [];
+
+      await withTransaction(async (client) => {
+        // Clients never receive password hashes anymore, so preserve stored ones by doctor id
+        const existing = await client.query(`SELECT id, password FROM ${table}`);
+        const passwordById = new Map(existing.rows.map(r => [r.id, r.password]));
+
+        await client.query(`DELETE FROM ${table}`);
+        for (const doc of items) {
+          await client.query(`
+            INSERT INTO ${table} (id, name, specialty, exp, days, time, fee, status, rating, username, password, email)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          `, [
+            doc.id || null,
+            doc.name || null,
+            doc.specialty || doc.speciality || doc.dept || null,
+            doc.exp || null,
+            doc.days || null,
+            doc.time || null,
+            doc.fee !== undefined && doc.fee !== null ? Number(doc.fee) : null,
+            doc.status || null,
+            doc.rating !== undefined && doc.rating !== null ? Number(doc.rating) : null,
+            doc.username || null,
+            doc.password || passwordById.get(doc.id) || null,
+            doc.email || null
+          ]);
+        }
+      });
     } else if (key === 'phh_appointments') {
-      await pool.query('BEGIN');
-      
+      await withTransaction(async (client) => {
       // Get existing appointments to compare and trigger notifications automatically
-      const existingResult = await pool.query('SELECT id, status, date, time FROM appointments');
+      const existingResult = await client.query('SELECT id, status, date, time FROM appointments');
       const existingMap = new Map(existingResult.rows.map(a => [a.id, a]));
 
-      await pool.query('DELETE FROM appointments');
+      await client.query('DELETE FROM appointments');
       for (const app of data) {
         const appId = app.id;
         const incomingStatus = app.status || null;
@@ -1482,27 +1533,27 @@ app.post('/api/sync/save-item', async (req, res) => {
         const existing = existingMap.get(appId);
         if (!existing) {
           // 1. New appointment notification
-          await pool.query(
+          await client.query(
             'INSERT INTO notifications (user_id, message, timestamp, read_status) VALUES ($1, $2, $3, $4)',
             [docId || 'admin', `New appointment ${appId} booked for patient ${app.patientName || app.patient_name || 'Patient'} on ${incomingDate} at ${incomingTime}.`, new Date().toISOString(), false]
           );
         } else {
           // 2. Status changed to Cancelled
           if (incomingStatus === 'Cancelled' && existing.status !== 'Cancelled') {
-            await pool.query(
+            await client.query(
               'INSERT INTO notifications (user_id, message, timestamp, read_status) VALUES ($1, $2, $3, $4)',
               [docId || 'admin', `Appointment ${appId} has been cancelled by patient or receptionist.`, new Date().toISOString(), false]
             );
           }
           // 3. Rescheduled notification (date or time changed)
           if ((incomingDate !== existing.date || incomingTime !== existing.time) && incomingStatus !== 'Cancelled') {
-            await pool.query(
+            await client.query(
               'INSERT INTO notifications (user_id, message, timestamp, read_status) VALUES ($1, $2, $3, $4)',
               [docId || 'admin', `Appointment ${appId} has been rescheduled to ${incomingDate} (${incomingTime}).`, new Date().toISOString(), false]
             );
           }
         }
-        await pool.query(`
+        await client.query(`
           INSERT INTO appointments (id, doctor_id, doctor_name, patient_name, patient_phone, patient_email, symptom, date, time, pay_id, fee_paid, status, reschedule_reason, old_slot, new_slot, rescheduled_by, rescheduled_at)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
         `, [
@@ -1525,12 +1576,12 @@ app.post('/api/sync/save-item', async (req, res) => {
           app.rescheduledAt || app.rescheduled_at || null
         ]);
       }
-      await pool.query('COMMIT');
+      });
     } else if (key === 'phh_slots') {
-      await pool.query('BEGIN');
-      await pool.query('DELETE FROM schedules');
+      await withTransaction(async (client) => {
+      await client.query('DELETE FROM schedules');
       for (const slot of data) {
-        await pool.query(`
+        await client.query(`
           INSERT INTO schedules (id, doctor_id, doctor_name, date, time, status, booking_id)
           VALUES ($1, $2, $3, $4, $5, $6, $7)
         `, [
@@ -1543,14 +1594,14 @@ app.post('/api/sync/save-item', async (req, res) => {
           slot.bookingId || slot.booking_id || null
         ]);
       }
-      await pool.query('COMMIT');
+      });
     } else if (key === 'phh_notifications') {
-      await pool.query('BEGIN');
-      await pool.query('DELETE FROM notifications');
+      await withTransaction(async (client) => {
+      await client.query('DELETE FROM notifications');
       for (const notif of data) {
         const notifId = notif.id ? parseInt(notif.id, 10) : null;
         if (notifId && !isNaN(notifId)) {
-          await pool.query(`
+          await client.query(`
             INSERT INTO notifications (id, user_id, message, timestamp, read_status)
             VALUES ($1, $2, $3, $4, $5)
           `, [
@@ -1561,7 +1612,7 @@ app.post('/api/sync/save-item', async (req, res) => {
             notif.readStatus !== undefined && notif.readStatus !== null ? notif.readStatus : (notif.read_status !== undefined && notif.read_status !== null ? notif.read_status : false)
           ]);
         } else {
-          await pool.query(`
+          await client.query(`
             INSERT INTO notifications (user_id, message, timestamp, read_status)
             VALUES ($1, $2, $3, $4)
           `, [
@@ -1572,12 +1623,12 @@ app.post('/api/sync/save-item', async (req, res) => {
           ]);
         }
       }
-      await pool.query('COMMIT');
+      });
     } else if (key === 'phh_reviews') {
-      await pool.query('BEGIN');
-      await pool.query('DELETE FROM doctor_reviews');
+      await withTransaction(async (client) => {
+      await client.query('DELETE FROM doctor_reviews');
       for (const rev of data) {
-        await pool.query(`
+        await client.query(`
           INSERT INTO doctor_reviews (appointment_id, doctor_id, patient_name, rating, review)
           VALUES ($1, $2, $3, $4, $5)
         `, [
@@ -1590,11 +1641,11 @@ app.post('/api/sync/save-item', async (req, res) => {
       }
 
       // Update the rating of doctors based on reviews average (null if no reviews yet)
-      await pool.query(`
+      await client.query(`
         UPDATE doctors d
         SET rating = (SELECT ROUND(AVG(rating), 1) FROM doctor_reviews r WHERE r.doctor_id = d.id)
       `);
-      await pool.query('COMMIT');
+      });
     }
 
     res.json({ success: true, message: `State for ${key} saved successfully.` });
@@ -1605,26 +1656,16 @@ app.post('/api/sync/save-item', async (req, res) => {
 });
 
 // Chief Admin Add Department API Route
-app.post('/api/admin/add-department', async (req, res) => {
-  const { adminId, name, description } = req.body;
+app.post('/api/admin/add-department', requireAdmin, async (req, res) => {
+  const { name, description } = req.body;
 
-  if (!adminId || !name) {
-    return res.status(400).json({ success: false, message: 'Admin ID and Department Name are required.' });
+  if (!name) {
+    return res.status(400).json({ success: false, message: 'Department Name is required.' });
   }
 
   try {
-    // Verify if the adminId belongs to the Chief Admin (username 'ajit')
-    const userResult = await pool.query(
-      'SELECT id, username, role FROM users WHERE id = $1 LIMIT 1',
-      [parseInt(adminId, 10)]
-    );
-
-    if (userResult.rows.length === 0) {
-      return res.status(403).json({ success: false, message: 'Invalid Admin credentials.' });
-    }
-
-    const user = userResult.rows[0];
-    if (user.role !== 'admin' || user.username !== 'ajit') {
+    // Verify from the signed token that this is the Chief Admin (username 'ajit')
+    if (req.admin.username !== 'ajit') {
       return res.status(403).json({ success: false, message: 'Unauthorized. Only the Chief Admin can add departments.' });
     }
 
@@ -1727,7 +1768,7 @@ app.get('/api/doctor/appointments-by-date', async (req, res) => {
 });
 
 // Admin Doctor Approval Endpoint
-app.post('/api/admin/approve-doctor', async (req, res) => {
+app.post('/api/admin/approve-doctor', requireAdmin, async (req, res) => {
   const { docId } = req.body;
 
   if (!docId) {
@@ -1735,33 +1776,36 @@ app.post('/api/admin/approve-doctor', async (req, res) => {
   }
 
   try {
-    await pool.query('BEGIN');
+    const approvedDoc = await withTransaction(async (client) => {
+      // 1. Find request details
+      const reqResult = await client.query('SELECT * FROM doctor_requests WHERE id = $1', [docId]);
+      if (reqResult.rows.length === 0) {
+        return null;
+      }
 
-    // 1. Find request details
-    const reqResult = await pool.query('SELECT * FROM doctor_requests WHERE id = $1', [docId]);
-    if (reqResult.rows.length === 0) {
-      await pool.query('ROLLBACK');
+      const doc = reqResult.rows[0];
+
+      // 2. Insert into doctors table with status 'Available'
+      await client.query(`
+        INSERT INTO doctors (id, name, specialty, exp, days, time, fee, status, rating, username, password, email)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `, [doc.id, doc.name, doc.specialty, doc.exp, doc.days, doc.time, doc.fee, 'Available', doc.rating, doc.username, doc.password, doc.email]);
+
+      // Create notification for approved doctor request
+      await client.query(
+        'INSERT INTO notifications (user_id, message, timestamp, read_status) VALUES ($1, $2, $3, $4)',
+        [doc.id, `Congratulations Dr. ${doc.name}! Your specialist profile has been approved and is now active.`, new Date().toISOString(), false]
+      );
+
+      // 3. Delete from doctor_requests table
+      await client.query('DELETE FROM doctor_requests WHERE id = $1', [docId]);
+
+      return doc;
+    });
+
+    if (!approvedDoc) {
       return res.status(404).json({ success: false, message: 'Doctor request not found.' });
     }
-
-    const doc = reqResult.rows[0];
-
-    // 2. Insert into doctors table with status 'Available'
-    await pool.query(`
-      INSERT INTO doctors (id, name, specialty, exp, days, time, fee, status, rating, username, password, email)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-    `, [doc.id, doc.name, doc.specialty, doc.exp, doc.days, doc.time, doc.fee, 'Available', doc.rating, doc.username, doc.password, doc.email]);
-
-    // Create notification for approved doctor request
-    await pool.query(
-      'INSERT INTO notifications (user_id, message, timestamp, read_status) VALUES ($1, $2, $3, $4)',
-      [doc.id, `Congratulations Dr. ${doc.name}! Your specialist profile has been approved and is now active.`, new Date().toISOString(), false]
-    );
-
-    // 3. Delete from doctor_requests table
-    await pool.query('DELETE FROM doctor_requests WHERE id = $1', [docId]);
-
-    await pool.query('COMMIT');
 
     // 4. Retrieve updated collections to return to client for direct localStorage update
     const doctorsResult = await pool.query('SELECT * FROM doctors');
@@ -1769,19 +1813,18 @@ app.post('/api/admin/approve-doctor', async (req, res) => {
 
     res.json({
       success: true,
-      message: `Doctor ${doc.name} has been successfully approved and marked as Available.`,
-      doctors: doctorsResult.rows,
-      doctorRequests: doctorRequestsResult.rows
+      message: `Doctor ${approvedDoc.name} has been successfully approved and marked as Available.`,
+      doctors: doctorsResult.rows.map(sanitizeDoctorRow),
+      doctorRequests: doctorRequestsResult.rows.map(sanitizeDoctorRow)
     });
   } catch (err) {
-    await pool.query('ROLLBACK');
     console.error('Database server doctor approval error:', err);
     res.status(500).json({ success: false, message: 'Failed to approve doctor request.', error: err.message });
   }
 });
 
 // Admin Doctor Rejection Endpoint
-app.post('/api/admin/reject-doctor', async (req, res) => {
+app.post('/api/admin/reject-doctor', requireAdmin, async (req, res) => {
   const { docId } = req.body;
 
   if (!docId) {
@@ -1789,24 +1832,25 @@ app.post('/api/admin/reject-doctor', async (req, res) => {
   }
 
   try {
-    await pool.query('BEGIN');
+    const docName = await withTransaction(async (client) => {
+      // 1. Delete from doctor_requests table
+      const deleteResult = await client.query('DELETE FROM doctor_requests WHERE id = $1 RETURNING name', [docId]);
+      if (deleteResult.rows.length === 0) {
+        return null;
+      }
 
-    // 1. Delete from doctor_requests table
-    const deleteResult = await pool.query('DELETE FROM doctor_requests WHERE id = $1 RETURNING name', [docId]);
-    if (deleteResult.rows.length === 0) {
-      await pool.query('ROLLBACK');
+      // Create notification for rejected doctor request
+      await client.query(
+        'INSERT INTO notifications (user_id, message, timestamp, read_status) VALUES ($1, $2, $3, $4)',
+        [docId, `Your specialist profile registration request has been rejected.`, new Date().toISOString(), false]
+      );
+
+      return deleteResult.rows[0].name;
+    });
+
+    if (!docName) {
       return res.status(404).json({ success: false, message: 'Doctor request not found.' });
     }
-
-    const docName = deleteResult.rows[0].name;
-
-    // Create notification for rejected doctor request
-    await pool.query(
-      'INSERT INTO notifications (user_id, message, timestamp, read_status) VALUES ($1, $2, $3, $4)',
-      [docId, `Your specialist profile registration request has been rejected.`, new Date().toISOString(), false]
-    );
-
-    await pool.query('COMMIT');
 
     // 2. Retrieve updated collections
     const doctorsResult = await pool.query('SELECT * FROM doctors');
@@ -1815,11 +1859,10 @@ app.post('/api/admin/reject-doctor', async (req, res) => {
     res.json({
       success: true,
       message: `Doctor request for ${docName} has been rejected and deleted.`,
-      doctors: doctorsResult.rows,
-      doctorRequests: doctorRequestsResult.rows
+      doctors: doctorsResult.rows.map(sanitizeDoctorRow),
+      doctorRequests: doctorRequestsResult.rows.map(sanitizeDoctorRow)
     });
   } catch (err) {
-    await pool.query('ROLLBACK');
     console.error('Database server doctor rejection error:', err);
     res.status(500).json({ success: false, message: 'Failed to reject doctor request.', error: err.message });
   }
@@ -2119,7 +2162,7 @@ app.get('/api/reports/statistics/:date', requireAdmin, async (req, res) => {
       ? `
         SELECT 
           COUNT(*) as total,
-          COUNT(CASE WHEN status = 'Confirmed' THEN 1 END) as confirmed,
+          COUNT(CASE WHEN status IS NOT NULL AND status NOT IN ('Cancelled', 'Pending', '') THEN 1 END) as confirmed,
           COUNT(CASE WHEN status = 'Cancelled' THEN 1 END) as cancelled,
           COUNT(CASE WHEN status = 'Pending' OR status IS NULL OR status = '' THEN 1 END) as pending
         FROM appointments
@@ -2127,7 +2170,7 @@ app.get('/api/reports/statistics/:date', requireAdmin, async (req, res) => {
       : `
         SELECT 
           COUNT(*) as total,
-          COUNT(CASE WHEN status = 'Confirmed' THEN 1 END) as confirmed,
+          COUNT(CASE WHEN status IS NOT NULL AND status NOT IN ('Cancelled', 'Pending', '') THEN 1 END) as confirmed,
           COUNT(CASE WHEN status = 'Cancelled' THEN 1 END) as cancelled,
           COUNT(CASE WHEN status = 'Pending' OR status IS NULL OR status = '' THEN 1 END) as pending
         FROM appointments
@@ -2206,7 +2249,7 @@ app.get('/api/reports/export/:date', requireAdmin, async (req, res) => {
       ? `
         SELECT 
           COUNT(*) as total,
-          COUNT(CASE WHEN status = 'Confirmed' THEN 1 END) as confirmed,
+          COUNT(CASE WHEN status IS NOT NULL AND status NOT IN ('Cancelled', 'Pending', '') THEN 1 END) as confirmed,
           COUNT(CASE WHEN status = 'Cancelled' THEN 1 END) as cancelled,
           COUNT(CASE WHEN status = 'Pending' OR status IS NULL OR status = '' THEN 1 END) as pending
         FROM appointments
@@ -2214,7 +2257,7 @@ app.get('/api/reports/export/:date', requireAdmin, async (req, res) => {
       : `
         SELECT 
           COUNT(*) as total,
-          COUNT(CASE WHEN status = 'Confirmed' THEN 1 END) as confirmed,
+          COUNT(CASE WHEN status IS NOT NULL AND status NOT IN ('Cancelled', 'Pending', '') THEN 1 END) as confirmed,
           COUNT(CASE WHEN status = 'Cancelled' THEN 1 END) as cancelled,
           COUNT(CASE WHEN status = 'Pending' OR status IS NULL OR status = '' THEN 1 END) as pending
         FROM appointments
@@ -2257,17 +2300,17 @@ app.get('/api/reports/export/:date', requireAdmin, async (req, res) => {
   }
 });
 
-// Reset State API
-app.post('/api/sync/reset', async (req, res) => {
+// Reset State API (admin only — this wipes the whole hospital dataset)
+app.post('/api/sync/reset', requireAdmin, async (req, res) => {
   try {
-    await pool.query('BEGIN');
-    await pool.query('DELETE FROM doctors');
-    await pool.query('DELETE FROM doctor_requests');
-    await pool.query('DELETE FROM appointments');
-    await pool.query('DELETE FROM schedules');
-    await pool.query('DELETE FROM notifications');
-    await pool.query('DELETE FROM doctor_reviews');
-    await pool.query('COMMIT');
+    await withTransaction(async (client) => {
+      await client.query('DELETE FROM doctors');
+      await client.query('DELETE FROM doctor_requests');
+      await client.query('DELETE FROM appointments');
+      await client.query('DELETE FROM schedules');
+      await client.query('DELETE FROM notifications');
+      await client.query('DELETE FROM doctor_reviews');
+    });
     res.json({ success: true, message: 'Database state reset successfully.' });
   } catch (err) {
     console.error('Error resetting database:', err);

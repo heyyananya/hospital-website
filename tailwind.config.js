@@ -4,7 +4,6 @@ module.exports = {
     "./index.html",
     "./admin-dashboard.html",
     "./doctor-dashboard.html",
-    "./doctor dashboard.html",
     "./patient-dashboard.html",
     "./receptionist-dashboard.html",
     "./portal-login.html",

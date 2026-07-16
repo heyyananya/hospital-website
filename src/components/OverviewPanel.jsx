@@ -57,13 +57,14 @@ function OverviewPanel() {
 
     try {
       const apiBase = window.API_BASE || "";
+      const token = localStorage.getItem("phh_jwt_token");
       const response = await fetch(`${apiBase}/api/admin/add-department`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          adminId: currentUser?.id,
           name: deptName.trim(),
           description: deptDesc.trim()
         })

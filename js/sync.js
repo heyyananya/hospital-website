@@ -38,12 +38,17 @@
         parsedValue = value;
       }
 
-      // Send update to server in background
+      // Send update to server in background.
+      // Attach the staff JWT when present — doctor tables require staff authorization.
+      const syncHeaders = { 'Content-Type': 'application/json' };
+      const staffToken = localStorage.getItem('phh_jwt_token');
+      if (staffToken) {
+        syncHeaders['Authorization'] = `Bearer ${staffToken}`;
+      }
+
       fetch(`${API_BASE}/api/sync/save-item`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: syncHeaders,
         body: JSON.stringify({
           key: key,
           data: parsedValue

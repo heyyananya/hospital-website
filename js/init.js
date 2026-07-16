@@ -10,9 +10,14 @@ if (urlParams.has("reset-db") || urlParams.has("reset")) {
   localStorage.removeItem("phh_current_user");
   localStorage.removeItem("phh_reviews");
 
-  // Call backend reset API to clear PostgreSQL tables
+  // Call backend reset API to clear PostgreSQL tables (admin token required)
   const apiBase = window.API_BASE || '';
-  fetch(`${apiBase}/api/sync/reset`, { method: 'POST' })
+  const resetHeaders = {};
+  const adminToken = localStorage.getItem('phh_jwt_token');
+  if (adminToken) {
+    resetHeaders['Authorization'] = `Bearer ${adminToken}`;
+  }
+  fetch(`${apiBase}/api/sync/reset`, { method: 'POST', headers: resetHeaders })
     .then(() => {
       // Clean the URL query string and reload
       window.location.href = window.location.pathname;

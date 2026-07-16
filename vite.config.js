@@ -11,7 +11,6 @@ export default defineConfig({
         admin: resolve(__dirname, 'admin-dashboard.html'),
         login: resolve(__dirname, 'portal-login.html'),
         doctor: resolve(__dirname, 'doctor-dashboard.html'),
-        doctor_space: resolve(__dirname, 'doctor dashboard.html'),
         patient: resolve(__dirname, 'patient-dashboard.html'),
         receptionist: resolve(__dirname, 'receptionist-dashboard.html')
       }
