@@ -1156,6 +1156,10 @@ async function initDbSchema() {
       );
     `);
 
+    // Data repair: visiting dates wrongly flipped to 'Confirmed' by old booking logic
+    // must go back to 'Available' (a schedules row is a whole date, not one time slot).
+    await pool.query(`UPDATE schedules SET status = 'Available', booking_id = NULL WHERE status = 'Confirmed';`);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS departments (
         id SERIAL PRIMARY KEY,
@@ -1590,7 +1594,8 @@ app.post('/api/sync/save-item', async (req, res) => {
           slot.doctorName || slot.doctor_name || null,
           slot.date || null,
           slot.time || null,
-          slot.status || null,
+          // 'Confirmed' is not a valid visiting-date status (legacy booking bug) — treat as Available
+          slot.status === 'Confirmed' ? 'Available' : (slot.status || null),
           slot.bookingId || slot.booking_id || null
         ]);
       }
@@ -1995,22 +2000,10 @@ app.post('/api/book-appointment', async (req, res) => {
       console.error("Error creating/updating patient record on booking:", patErr);
     }
 
-    // Update schedules/slots table status to Confirmed and booking_id to bookingId
-    try {
-      console.log(`SQL Query Execution: Updating schedule slot status on appointment booking for doctor ${doctor_id} on ${appointment_date}`);
-      const slotUpdateResult = await pool.query(
-        `
-        UPDATE schedules
-        SET status = 'Confirmed', booking_id = $1
-        WHERE doctor_id = $2 AND date = $3 AND (time = $4 OR time LIKE $5)
-        RETURNING *
-        `,
-        [bookingId, doctor_id, appointment_date, appointment_time, `${appointment_time}%`]
-      );
-      console.log("Database update result (schedules):", slotUpdateResult.rows);
-    } catch (slotErr) {
-      console.error("Error updating schedule status on booking:", slotErr);
-    }
+    // NOTE: Do NOT change the schedules row status here. Each schedules row represents
+    // a whole visiting DATE (not a single time slot), so one booking must not flip the
+    // date to 'Confirmed' — the date stays 'Available' for other patients until the
+    // doctor closes it or it reaches its daily booking capacity ('Fully Booked').
 
     // Auto-create notification for new appointment booking
     try {
