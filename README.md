@@ -4,15 +4,17 @@ A full-stack hospital management web application with role-based dashboards for 
 
 ## Screenshots
 
-> Add your screenshots to a `screenshots/` folder and update the paths below.
+**Home Page**
 
-| Home | Patient Dashboard |
-| --- | --- |
-| ![Home page](screenshots/home.png) | ![Patient dashboard](screenshots/patient-dashboard.png) |
+![Home page](screenshots/home.png)
 
-| Portal Login | Doctor Dashboard |
-| --- | --- |
-| ![Portal login](screenshots/portal-login.png) | ![Doctor dashboard](screenshots/doctor-dashboard.png) |
+**Patient Dashboard**
+
+![Patient dashboard](screenshots/patient-dashboard.png)
+
+**Doctor Dashboard**
+
+![Doctor dashboard](screenshots/doctor-dashboard.png)
 
 ## Features
 
